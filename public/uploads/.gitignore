@@ -1,0 +1,6 @@
+# Ignorar todas las imágenes subidas
+*
+
+# Excepto este archivo
+!.gitignore
+!README.md
