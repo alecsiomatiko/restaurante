@@ -9,6 +9,7 @@ interface Product {
   name: string
   description: string
   price: number
+  cost_price?: number
   stock?: number
   image_url?: string
   category_id: number

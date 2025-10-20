@@ -23,6 +23,7 @@ interface Product {
   name: string
   description: string
   price: number
+  cost_price?: number
   image_url?: string
   category_id: number
   stock?: number
@@ -52,6 +53,7 @@ export default function AdminProductsPage() {
     name: "",
     description: "",
     price: 0,
+    cost_price: 0,
     image_url: "",
     category_id: 0,
     stock: 0,
@@ -162,6 +164,7 @@ export default function AdminProductsPage() {
         name: "",
         description: "",
         price: 0,
+        cost_price: 0,
         image_url: "",
         category_id: 0,
         stock: 0,
@@ -282,7 +285,7 @@ export default function AdminProductsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="price">Precio *</Label>
+                    <Label htmlFor="price">Precio de Venta *</Label>
                     <Input
                       id="price"
                       type="number"
@@ -291,6 +294,32 @@ export default function AdminProductsPage() {
                       onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })}
                       placeholder="0.00"
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cost-price">Precio de Costo</Label>
+                    <Input
+                      id="cost-price"
+                      type="number"
+                      step="0.01"
+                      value={newProduct.cost_price}
+                      onChange={(e) => setNewProduct({ ...newProduct, cost_price: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">Para calcular ganancias en reportes</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Margen de Ganancia</Label>
+                    <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                      <span className="text-sm font-medium">
+                        {newProduct.price > 0 && newProduct.cost_price > 0 
+                          ? `${(((newProduct.price - newProduct.cost_price) / newProduct.price) * 100).toFixed(1)}%`
+                          : '0%'
+                        }
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Ganancia sobre precio de venta</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -553,11 +582,28 @@ export default function AdminProductsPage() {
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-semibold text-lg truncate">{product.name}</h3>
-                  <span className="text-xl font-bold text-purple-600">${product.price}</span>
+                  <div className="text-right">
+                    <div className="text-xl font-bold text-purple-600">${product.price}</div>
+                    {product.cost_price && (
+                      <div className="text-xs text-muted-foreground">
+                        Costo: ${product.cost_price}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                   {product.description}
                 </p>
+                {product.cost_price && product.cost_price > 0 && (
+                  <div className="mb-3 p-2 bg-green-50 dark:bg-green-950 rounded-md">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-green-700 dark:text-green-300">Ganancia:</span>
+                      <span className="font-medium text-green-800 dark:text-green-200">
+                        ${(product.price - product.cost_price).toFixed(2)} ({(((product.price - product.cost_price) / product.price) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm text-muted-foreground">
                     Stock: <span className="font-medium">{product.stock ?? 0}</span>
@@ -640,7 +686,7 @@ export default function AdminProductsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-price">Precio *</Label>
+                    <Label htmlFor="edit-price">Precio de Venta *</Label>
                     <Input
                       id="edit-price"
                       type="number"
@@ -648,6 +694,32 @@ export default function AdminProductsPage() {
                       value={editingProduct.price}
                       onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })}
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-cost-price">Precio de Costo</Label>
+                    <Input
+                      id="edit-cost-price"
+                      type="number"
+                      step="0.01"
+                      value={editingProduct.cost_price || 0}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, cost_price: parseFloat(e.target.value) || 0 })}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">Para calcular ganancias en reportes</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Margen de Ganancia</Label>
+                    <div className="flex items-center h-10 px-3 bg-muted rounded-md">
+                      <span className="text-sm font-medium">
+                        {editingProduct.price > 0 && (editingProduct.cost_price || 0) > 0 
+                          ? `${(((editingProduct.price - (editingProduct.cost_price || 0)) / editingProduct.price) * 100).toFixed(1)}%`
+                          : '0%'
+                        }
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Ganancia sobre precio de venta</p>
                   </div>
                 </div>
                 <div className="space-y-2">

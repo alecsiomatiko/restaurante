@@ -62,6 +62,9 @@ interface ReportData {
     name: string
     quantity: number
     sales: number
+    profit?: number
+    cost?: number
+    profitMargin?: number
   }>
   dailySales: Array<{
     date: string
@@ -256,12 +259,15 @@ export default function ReportesPage() {
 
     // Hoja 5: Productos Más Vendidos
     if (reportData.topProducts?.length > 0) {
-      const productsData = [['Producto', 'Cantidad', 'Ventas']]
+      const productsData = [['Producto', 'Cantidad', 'Ventas', 'Costo Total', 'Ganancia', 'Margen %']]
       reportData.topProducts.forEach(product => {
         productsData.push([
           product.name,
           product.quantity,
-          product.sales
+          product.sales,
+          product.cost || 0,
+          product.profit || 0,
+          product.profitMargin || 0
         ])
       })
       const ws5 = XLSX.utils.aoa_to_sheet(productsData)
@@ -857,13 +863,24 @@ export default function ReportesPage() {
                           <div>
                             <p className="text-white font-medium">{product.name}</p>
                             <p className="text-slate-400 text-sm">{product.quantity} unidades vendidas</p>
+                            {product.profit !== undefined && (
+                              <p className="text-green-400 text-xs">
+                                Ganancia: {formatCurrency(product.profit)} ({product.profitMargin?.toFixed(1)}%)
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-white font-bold">{formatCurrency(product.sales)}</p>
-                          <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
-                            Hot
-                          </Badge>
+                          {product.profit !== undefined ? (
+                            <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+                              +{formatCurrency(product.profit)}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30">
+                              Hot
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     ))}

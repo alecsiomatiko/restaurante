@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       name,
       description,
       price,
+      cost_price,
       category_id,
       image_url,
       is_featured,
@@ -91,13 +92,14 @@ export async function POST(request: NextRequest) {
 
     const result = await executeQuery(
       `INSERT INTO products 
-       (name, description, price, category_id, image_url, is_featured, stock, 
+       (name, description, price, cost_price, category_id, image_url, is_featured, stock, 
         ingredients, allergens, nutritional_info, preparation_time) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         description || null,
         price,
+        cost_price || 0,
         category_id || null,
         image_url || null,
         is_featured || false,
@@ -147,6 +149,7 @@ export async function PUT(request: NextRequest) {
       name,
       description,
       price,
+      cost_price,
       category_id,
       image_url,
       is_available,
@@ -177,6 +180,10 @@ export async function PUT(request: NextRequest) {
     if (price !== undefined) {
       updates.push('price = ?')
       values.push(price)
+    }
+    if (cost_price !== undefined) {
+      updates.push('cost_price = ?')
+      values.push(cost_price)
     }
     if (category_id !== undefined) {
       updates.push('category_id = ?')

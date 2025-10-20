@@ -93,31 +93,59 @@ export async function GET(request: NextRequest) {
     const totalSales = revenueResult[0]?.total_sales || 0
     const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0
     
-    // Productos más vendidos - extraer del JSON items
+    // Productos más vendidos con información de costos
     const [ordersWithItems] = await conn.execute(`
       SELECT items FROM orders 
       WHERE created_at >= ? AND status IN ("completed", "delivered", "pendiente")
     `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
     
-    // Procesar productos del JSON
+    // Obtener información de productos con costos
+    const [productsInfo] = await conn.execute(`
+      SELECT id, name, price, cost_price FROM products
+    `) as any[]
+    
+    const productInfoMap = new Map()
+    productsInfo.forEach((product: any) => {
+      productInfoMap.set(product.name, {
+        price: parseFloat(product.price || 0),
+        cost_price: parseFloat(product.cost_price || 0)
+      })
+    })
+    
+    // Procesar productos del JSON con cálculo de ganancias
     const productStats = new Map()
     for (const order of ordersWithItems as any[]) {
       try {
         const items = JSON.parse(order.items)
         for (const item of items) {
           const key = item.name
+          const productInfo = productInfoMap.get(item.name)
+          const itemPrice = parseFloat(item.price)
+          const itemCost = productInfo?.cost_price || 0
+          const itemQuantity = item.quantity
+          
+          const itemSales = itemQuantity * itemPrice
+          const itemCostTotal = itemQuantity * itemCost
+          const itemProfit = itemSales - itemCostTotal
+          
           if (productStats.has(key)) {
             const existing = productStats.get(key)
             productStats.set(key, {
               name: item.name,
-              quantity: existing.quantity + item.quantity,
-              sales: existing.sales + (item.quantity * parseFloat(item.price))
+              quantity: existing.quantity + itemQuantity,
+              sales: existing.sales + itemSales,
+              cost: existing.cost + itemCostTotal,
+              profit: existing.profit + itemProfit,
+              profitMargin: 0 // Se calculará después
             })
           } else {
             productStats.set(key, {
               name: item.name,
-              quantity: item.quantity,
-              sales: item.quantity * parseFloat(item.price)
+              quantity: itemQuantity,
+              sales: itemSales,
+              cost: itemCostTotal,
+              profit: itemProfit,
+              profitMargin: 0 // Se calculará después
             })
           }
         }
@@ -126,7 +154,13 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    const productsResult = Array.from(productStats.values())
+    // Calcular márgenes de ganancia
+    const productsArray = Array.from(productStats.values()).map((product: any) => ({
+      ...product,
+      profitMargin: product.sales > 0 ? (product.profit / product.sales) * 100 : 0
+    }))
+    
+    const productsResult = productsArray
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10)
     

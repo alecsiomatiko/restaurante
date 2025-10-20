@@ -60,3 +60,27 @@ export type Notification = {
   timestamp: string
   data?: any
 }
+
+// Tipos para productos y reportes
+export interface Product {
+  id: number
+  name: string
+  description: string
+  price: number
+  cost_price?: number
+  stock?: number
+  image_url?: string
+  category_id: number
+  category_name?: string
+  available: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Category {
+  id: number
+  name: string
+  description?: string
+  created_at: string
+  updated_at: string
+}
