@@ -2,23 +2,23 @@ import { Suspense } from 'react'
 import ThankYouClient from './thank-you-client'
 
 interface ThankYouPageProps {
-  searchParams: {
+  searchParams: Promise<{
     orderId?: string
     payment?: string 
     status?: string
-  }
+  }>
 }
 
-export default function ThankYouPage({ searchParams }: ThankYouPageProps) {
-  // En el Server Component recibimos los searchParams directamente
-  console.log('🚀 Server Component - searchParams recibidos:', searchParams)
+export default async function ThankYouPage({ searchParams }: ThankYouPageProps) {
+  // En Next.js 15, searchParams es una Promise
+  const params = await searchParams
   
   return (
     <Suspense fallback={<ThankYouLoading />}>
       <ThankYouClient 
-        orderId={searchParams.orderId}
-        paymentMethod={searchParams.payment}
-        status={searchParams.status}
+        orderId={params.orderId}
+        paymentMethod={params.payment}
+        status={params.status}
       />
     </Suspense>
   )

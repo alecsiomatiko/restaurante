@@ -9,6 +9,7 @@ import Footer from "@/components/layout/footer"
 import FloatingCart from "@/components/cart/floating-cart"
 import { NotificationToast } from "@/components/notifications/notification-toast"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import AuthInterceptor from "@/components/AuthInterceptor"
 
 export default function ClientRootProviders({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
@@ -17,6 +18,7 @@ export default function ClientRootProviders({ children }: { children: React.Reac
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <AuthInterceptor />
         <AuthProvider>
           <NotificationProvider>
             <CartProvider>

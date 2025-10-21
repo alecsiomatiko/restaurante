@@ -108,27 +108,42 @@ async function ensureSessionTable() {
 }
 
 export async function createSession(user: UserPayload): Promise<SessionData> {
-  await ensureSessionTable()
-  const { accessToken, refreshToken } = generateTokens(user)
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 días
-  
-  // Eliminar sesiones antiguas del usuario
-  await executeQuery(
-    'DELETE FROM user_sessions WHERE user_id = ? AND expires_at < NOW()',
-    [user.id]
-  )
-  
-  // Crear nueva sesión
-  await executeQuery(
-    'INSERT INTO user_sessions (user_id, session_token, refresh_token, expires_at) VALUES (?, ?, ?, ?)',
-    [user.id, accessToken, refreshToken, expiresAt]
-  )
-  
-  return {
-    accessToken,
-    refreshToken,
-    user,
-    expiresAt
+  console.log('🔄 Iniciando createSession para usuario:', user.id)
+  try {
+    await ensureSessionTable()
+    console.log('✅ Tabla de sesiones verificada')
+    
+    const { accessToken, refreshToken } = generateTokens(user)
+    console.log('🎫 Tokens generados')
+    
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 días
+    
+    // Eliminar sesiones antiguas del usuario
+    await executeQuery(
+      'DELETE FROM user_sessions WHERE user_id = ? AND expires_at < NOW()',
+      [user.id]
+    )
+    console.log('🗑️ Sesiones antiguas eliminadas')
+    
+    // Crear nueva sesión
+    await executeQuery(
+      'INSERT INTO user_sessions (user_id, session_token, refresh_token, expires_at) VALUES (?, ?, ?, ?)',
+      [user.id, accessToken, refreshToken, expiresAt]
+    )
+    console.log('💾 Nueva sesión guardada en BD')
+    
+    const sessionData = {
+      accessToken,
+      refreshToken,
+      user,
+      expiresAt
+    }
+    
+    console.log('✅ createSession completado exitosamente')
+    return sessionData
+  } catch (error) {
+    console.error('❌ Error en createSession:', error)
+    throw error
   }
 }
 

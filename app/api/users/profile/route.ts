@@ -6,7 +6,14 @@ import { verifyAccessToken, getSessionByToken } from "@/lib/auth-mysql"
 // GET - Obtener perfil del usuario
 export async function GET(request: NextRequest) {
   try {
-    const authToken = request.cookies.get('auth-token')?.value
+    // Buscar token en cookies o header Authorization
+    let authToken = request.cookies.get('auth-token')?.value
+    
+    if (!authToken) {
+      const authHeader = request.headers.get('Authorization')
+      authToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
+    }
+    
     if (!authToken) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 })
     }

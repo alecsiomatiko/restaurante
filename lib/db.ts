@@ -122,3 +122,31 @@ export async function updateUserAdminStatus(userId: number, isAdmin: boolean) {
     return { success: false, message: "No se pudo actualizar el rol" }
   }
 }
+
+// Cambiar contraseña de usuario
+export async function changePassword(userId: number, currentPassword: string, newPassword: string) {
+  try {
+    // Obtener usuario actual
+    const user = await getUserById(userId)
+    if (!user.success || !user.user) {
+      return { success: false, message: "Usuario no encontrado" }
+    }
+
+    // Verificar contraseña actual
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.user.password)
+    if (!isCurrentPasswordValid) {
+      return { success: false, message: "Contraseña actual incorrecta" }
+    }
+
+    // Encriptar nueva contraseña
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10)
+
+    // Actualizar contraseña en la base de datos
+    await executeQuery('UPDATE users SET password = ? WHERE id = ?', [hashedNewPassword, userId])
+    
+    return { success: true, message: "Contraseña actualizada correctamente" }
+  } catch (error) {
+    console.error("Error cambiando contraseña:", error)
+    return { success: false, message: "No se pudo cambiar la contraseña" }
+  }
+}
