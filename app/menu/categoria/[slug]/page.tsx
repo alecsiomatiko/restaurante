@@ -8,8 +8,34 @@ import Link from "next/link"
 import { toast } from "sonner"
 import AddToCartButton from "@/components/menu/add-to-cart-button"
 import ProductImagePreview from "@/components/menu/product-image-preview"
-import { getProductsByCategoryWithImages, getCategoriesWithProducts } from "@/lib/product-service"
-import type { Product, Category } from "@/lib/product-service"
+
+interface Product {
+  id: number
+  name: string
+  description: string | null
+  price: string
+  available: boolean
+  category_id: number
+  image_url: string | null
+  stock?: number
+  images?: Array<{
+    id: number
+    image_url: string
+    alt_text: string | null
+    is_primary: boolean
+    display_order: number
+  }>
+}
+
+interface Category {
+  id: number
+  name: string
+  description: string | null
+  image_url?: string
+  subtitle?: string
+  product_count?: number
+  products?: Product[]
+}
 
 export default function CategoryPage() {
   const params = useParams()
@@ -28,9 +54,10 @@ export default function CategoryPage() {
     try {
       setLoading(true)
 
-      // ✅ Obtener categoría dinámicamente
-      const categories = await getCategoriesWithProducts()
-      const foundCategory = categories.find((cat) => cat.id === Number.parseInt(categoryId))
+      // ✅ Obtener categoría dinámicamente desde API
+      const categoriesResponse = await fetch('/api/categories')
+      const categories = await categoriesResponse.json()
+      const foundCategory = categories.find((cat: Category) => cat.id === Number.parseInt(categoryId))
 
       if (!foundCategory) {
         toast.error("Categoría no encontrada")
@@ -39,8 +66,9 @@ export default function CategoryPage() {
 
       setCategory(foundCategory)
 
-      // ✅ Obtener productos con imágenes dinámicamente
-      const productsData = await getProductsByCategoryWithImages(Number.parseInt(categoryId))
+      // ✅ Obtener productos con imágenes dinámicamente desde API
+      const productsResponse = await fetch(`/api/products-mysql?category=${categoryId}`)
+      const productsData = await productsResponse.json()
       setProducts(productsData)
 
       console.log(`Categoría: ${foundCategory.name}, Productos encontrados: ${productsData.length}`)
@@ -131,7 +159,7 @@ export default function CategoryPage() {
                   <ProductImagePreview
                     productId={product.id}
                     productName={product.name}
-                    fallbackImage={product.image_url}
+                    fallbackImage={product.image_url || undefined}
                     className="h-full w-full"
                     showImageCount={true}
                   />
@@ -139,7 +167,7 @@ export default function CategoryPage() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
-                    <span className="text-2xl font-bold text-amber-600">${product.price.toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-amber-600">${parseFloat(product.price).toFixed(2)}</span>
                   </div>
 
                   {product.description && <p className="text-gray-700 mb-4">{product.description}</p>}
@@ -151,7 +179,7 @@ export default function CategoryPage() {
                   <AddToCartButton
                     menuItem={{
                       title: product.name,
-                      price: product.price,
+                      price: parseFloat(product.price),
                     }}
                   />
                 </div>

@@ -114,8 +114,44 @@ export default function OrderTrackingPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>("")
   const [refreshing, setRefreshing] = useState(false)
+  
+  // Estados para tracking en tiempo real del driver
+  const [driverLocation, setDriverLocation] = useState<{lat: number, lng: number} | null>(null)
+  const [driverInfo, setDriverInfo] = useState<{name: string, phone: string} | null>(null)
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<string | null>(null)
+  const [trackingError, setTrackingError] = useState<string | null>(null)
 
   const orderId = useMemo(() => Number(params.id), [params.id])
+
+  // Función para obtener ubicación del driver
+  const fetchDriverLocation = async () => {
+    if (!orderId) return
+
+    try {
+      const response = await fetch(`/api/driver/location?orderId=${orderId}`, {
+        credentials: 'include'
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.location) {
+          setDriverLocation(data.location)
+          setDriverInfo({
+            name: data.driverName || 'Repartidor',
+            phone: data.driverPhone || ''
+          })
+          setLastLocationUpdate(data.lastUpdate)
+          setTrackingError(null)
+        } else {
+          setDriverLocation(null)
+          setDriverInfo(null)
+        }
+      }
+    } catch (error) {
+      console.error('Error obteniendo ubicación del driver:', error)
+      setTrackingError('Error obteniendo ubicación')
+    }
+  }
 
   const fetchData = async () => {
     if (!orderId) {
@@ -200,12 +236,28 @@ export default function OrderTrackingPage() {
 
     const interval = setInterval(() => {
       void fetchData()
-    }, 15000)
+      // Solo obtener ubicación si hay assignment activo
+      if (assignment?.status === 'accepted') {
+        void fetchDriverLocation()
+      }
+    }, 10000) // Actualizar cada 10 segundos
 
     return () => {
       clearInterval(interval)
     }
-  }, [authLoading, user, params.id])
+  }, [authLoading, user, params.id, assignment?.status])
+
+  // Efecto separado para tracking cuando cambia el assignment
+  useEffect(() => {
+    if (assignment?.status === 'accepted') {
+      void fetchDriverLocation()
+      const locationInterval = setInterval(() => {
+        void fetchDriverLocation()
+      }, 5000) // Actualizar ubicación cada 5 segundos
+
+      return () => clearInterval(locationInterval)
+    }
+  }, [assignment?.status, orderId])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -336,15 +388,68 @@ export default function OrderTrackingPage() {
 
         {isDelivery && ["asignado_repartidor", "en_camino"].includes(normalizedStatus) && (
           <section className="mb-8 rounded-2xl border border-amber-100 bg-white p-6 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold text-amber-900">Seguimiento en tiempo real</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-amber-900">Seguimiento en tiempo real</h2>
+              {driverLocation && (
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-green-600 font-medium">En vivo</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Información del repartidor */}
+            {driverInfo && (
+              <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+                      <User className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-amber-900">{driverInfo.name}</p>
+                      <p className="text-sm text-amber-600">Tu repartidor</p>
+                    </div>
+                  </div>
+                  {driverInfo.phone && (
+                    <a 
+                      href={`tel:${driverInfo.phone}`}
+                      className="flex items-center space-x-2 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      <Phone className="h-4 w-4" />
+                      <span className="text-sm">Llamar</span>
+                    </a>
+                  )}
+                </div>
+                {lastLocationUpdate && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    Última actualización: {new Date(lastLocationUpdate).toLocaleTimeString('es-MX')}
+                  </p>
+                )}
+              </div>
+            )}
+
             <DeliveryMap
-              driverLocation={assignment?.delivery_location as { lat: number; lng: number } | undefined}
+              driverLocation={driverLocation || (assignment?.delivery_location as { lat: number; lng: number } | undefined)}
               deliveryAddress={deliveryAddress?.address || customerInfo?.address || ""}
-              driverName={assignment?.driver_name || undefined}
+              driverName={driverInfo?.name || assignment?.driver_name || undefined}
             />
-            <p className="mt-4 text-center text-sm text-amber-600">
-              📍 El mapa se actualiza automáticamente cada 15 segundos
-            </p>
+            
+            <div className="mt-4 flex items-center justify-center space-x-2 text-sm">
+              <RefreshCw className="h-4 w-4 text-amber-600" />
+              <span className="text-amber-600">
+                {driverLocation ? 'Actualizando cada 5 segundos' : 'El mapa se actualiza automáticamente'}
+              </span>
+            </div>
+            
+            {trackingError && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600 flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  {trackingError}
+                </p>
+              </div>
+            )}
           </section>
         )}
 

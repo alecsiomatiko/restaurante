@@ -40,6 +40,11 @@ export default function DriverDashboard() {
   const [activeDelivery, setActiveDelivery] = useState<Assignment | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
+  
+  // Estados para tracking de ubicación
+  const [isTrackingLocation, setIsTrackingLocation] = useState(false)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const [watchId, setWatchId] = useState<number | null>(null)
 
   useEffect(() => { checkAuth() }, [])
   useEffect(() => {
@@ -49,6 +54,24 @@ export default function DriverDashboard() {
       return () => clearInterval(interval)
     }
   }, [driver])
+
+  // Iniciar tracking cuando hay entrega activa
+  useEffect(() => {
+    if (activeDelivery && !isTrackingLocation) {
+      startLocationTracking()
+    } else if (!activeDelivery && isTrackingLocation) {
+      stopLocationTracking()
+    }
+  }, [activeDelivery])
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+    }
+  }, [watchId])
 
   const checkAuth = async () => {
     try {
@@ -65,6 +88,65 @@ export default function DriverDashboard() {
       router.push('/login')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Funciones para tracking de ubicación
+  const startLocationTracking = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocalización no soportada')
+      return
+    }
+
+    setLocationError(null)
+    setIsTrackingLocation(true)
+
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 30000 // Cache por 30 segundos
+    }
+
+    const id = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords
+        updateDriverLocation(latitude, longitude)
+      },
+      (error) => {
+        console.error('Error de geolocalización:', error)
+        setLocationError(`Error de ubicación: ${error.message}`)
+      },
+      options
+    )
+
+    setWatchId(id)
+  }
+
+  const stopLocationTracking = () => {
+    if (watchId) {
+      navigator.geolocation.clearWatch(watchId)
+      setWatchId(null)
+    }
+    setIsTrackingLocation(false)
+    setLocationError(null)
+  }
+
+  const updateDriverLocation = async (latitude: number, longitude: number) => {
+    try {
+      const response = await fetch('/api/driver/location', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ latitude, longitude })
+      })
+
+      if (!response.ok) {
+        console.error('Error actualizando ubicación:', response.status)
+      }
+    } catch (error) {
+      console.error('Error enviando ubicación:', error)
     }
   }
 
@@ -88,8 +170,15 @@ export default function DriverDashboard() {
   const handleAccept = async (assignmentId: number) => {
     setActionLoading(assignmentId)
     try {
-      const response = await fetch(`/api/driver/assignments/${assignmentId}/accept`, { method: 'POST', credentials: 'include' })
-      if (response.ok) await loadAssignments()
+      const response = await fetch(`/api/driver/assignments/${assignmentId}/accept`, { 
+        method: 'POST', 
+        credentials: 'include' 
+      })
+      if (response.ok) {
+        await loadAssignments()
+        // Iniciar tracking automáticamente después de aceptar
+        startLocationTracking()
+      }
     } catch (error) {
       console.error('Error:', error)
     } finally {
@@ -141,7 +230,20 @@ export default function DriverDashboard() {
                 <p className="text-sm text-purple-200">Repartidor</p>
               </div>
             </div>
-            <Badge className="bg-green-500 text-white">En línea</Badge>
+            <div className="flex items-center space-x-2">
+              {isTrackingLocation && (
+                <Badge className="bg-green-500 text-white flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <span>Compartiendo ubicación</span>
+                </Badge>
+              )}
+              {locationError && (
+                <Badge className="bg-red-500 text-white">
+                  Error GPS
+                </Badge>
+              )}
+              <Badge className="bg-green-500 text-white">En línea</Badge>
+            </div>
           </div>
         </div>
       </div>

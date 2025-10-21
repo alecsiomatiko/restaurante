@@ -329,7 +329,23 @@ export default function OrdersPage() {
                       )}
                     </div>
 
-                    <div className="flex justify-end mt-4">
+                    <div className="flex justify-end mt-4 space-x-2">
+                      {/* Botón de tracking en tiempo real para pedidos en camino */}
+                      {(order.status === 'en_camino' || order.status === 'asignado_repartidor') && order.delivery_type === 'delivery' && (
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white flex items-center"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(`/orders/${order.id}/tracking`)
+                          }}
+                        >
+                          <MapPin className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Seguir en</span> Vivo
+                          <div className="w-2 h-2 bg-white rounded-full ml-2 animate-pulse"></div>
+                        </Button>
+                      )}
+                      
                       <Button
                         variant="outline"
                         size="sm"

@@ -59,6 +59,32 @@ export async function POST(
       [assignment.driver_id]
     )
 
+    // Obtener información del driver para la notificación
+    const drivers = await executeQuery(
+      'SELECT name, phone FROM delivery_drivers WHERE id = ?',
+      [assignment.driver_id]
+    ) as any[]
+    const driver = drivers[0]
+
+    // Notificar al cliente (no bloquear si falla)
+    if (driver) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/driver/notify-customer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: assignment.order_id,
+            driverName: driver.name,
+            driverPhone: driver.phone,
+            estimatedTime: '30-45 minutos'
+          })
+        })
+      } catch (notifyError) {
+        console.error('Error notificando al cliente:', notifyError)
+        // No falla la aceptación si la notificación falla
+      }
+    }
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error accepting assignment:', error)

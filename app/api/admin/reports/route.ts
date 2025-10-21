@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - period)
     
-    // Total de ventas y pedidos REAL de toda la BD
+    // Total de ventas y pedidos REAL de toda la BD - SIN FILTROS DE STATUS RESTRICTIVOS
     const [revenueResult] = await conn.execute(
-      'SELECT COUNT(*) as total_orders, SUM(total) as total_sales FROM orders WHERE created_at >= ? AND status IN ("completed", "delivered", "pendiente", "preparando", "en_camino")',
+      'SELECT COUNT(*) as total_orders, COALESCE(SUM(CAST(total AS DECIMAL(10,2))), 0) as total_sales FROM orders WHERE created_at >= ?',
       [startDate.toISOString().slice(0, 19).replace('T', ' ')]
     ) as any[]
     
@@ -72,31 +72,66 @@ export async function GET(request: NextRequest) {
       ORDER BY waiter_sales DESC
     `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
     
-    // Corte diario (resumen del día actual)
+    // Corte diario unificado (órdenes online + pagos de mesa)
     const today = new Date()
     const todayStart = startOfDay(today).toISOString().slice(0, 19).replace('T', ' ')
     const todayEnd = endOfDay(today).toISOString().slice(0, 19).replace('T', ' ')
     
-    const [dailyCutResult] = await conn.execute(`
+    // Pagos de órdenes online (tabla orders)
+    const [onlinePayments] = await conn.execute(`
       SELECT 
-        COUNT(*) as today_orders,
-        SUM(total) as today_sales,
-        AVG(total) as today_avg_ticket,
-        SUM(CASE WHEN payment_method = 'efectivo' THEN total ELSE 0 END) as cash_sales,
-        SUM(CASE WHEN payment_method = 'tarjeta' THEN total ELSE 0 END) as card_sales,
-        SUM(CASE WHEN payment_method = 'mercadopago' THEN total ELSE 0 END) as mp_sales
+        COUNT(*) as online_orders,
+        COALESCE(SUM(CAST(total AS DECIMAL(10,2))), 0) as online_sales,
+        COALESCE(SUM(CASE WHEN payment_method = 'efectivo' THEN CAST(total AS DECIMAL(10,2)) ELSE 0 END), 0) as online_cash,
+        COALESCE(SUM(CASE WHEN payment_method = 'tarjeta' THEN CAST(total AS DECIMAL(10,2)) ELSE 0 END), 0) as online_card,
+        COALESCE(SUM(CASE WHEN payment_method = 'mercadopago' THEN CAST(total AS DECIMAL(10,2)) ELSE 0 END), 0) as online_mp
       FROM orders 
-      WHERE created_at >= ? AND created_at <= ?
-    `, [todayStart, todayEnd])
+      WHERE created_at >= ? AND created_at <= ? AND waiter_order != 1
+    `, [todayStart, todayEnd]) as any[]
+    
+    // Pagos de mesas (tabla payments)
+    const [tablePayments] = await conn.execute(`
+      SELECT 
+        COUNT(*) as table_transactions,
+        COALESCE(SUM(CAST(total_amount AS DECIMAL(10,2))), 0) as table_sales,
+        COALESCE(SUM(CASE WHEN payment_method = 'efectivo' THEN CAST(total_amount AS DECIMAL(10,2)) ELSE 0 END), 0) as table_cash,
+        COALESCE(SUM(CASE WHEN payment_method = 'tarjeta' THEN CAST(total_amount AS DECIMAL(10,2)) ELSE 0 END), 0) as table_card
+      FROM payments 
+      WHERE payment_date >= ? AND payment_date <= ?
+    `, [todayStart, todayEnd]) as any[]
+    
+    // Combinar ambos tipos de pago
+    const onlineData = onlinePayments[0] || {};
+    const tableData = tablePayments[0] || {};
+    
+    const dailyCutResult = [{
+      today_orders: (onlineData.online_orders || 0) + (tableData.table_transactions || 0),
+      today_sales: (onlineData.online_sales || 0) + (tableData.table_sales || 0),
+      today_avg_ticket: 0, // Se calculará después
+      cash_sales: (onlineData.online_cash || 0) + (tableData.table_cash || 0),
+      card_sales: (onlineData.online_card || 0) + (tableData.table_card || 0),
+      mp_sales: onlineData.online_mp || 0,
+      // Desglose adicional
+      online_cash: onlineData.online_cash || 0,
+      online_card: onlineData.online_card || 0,
+      online_mp: onlineData.online_mp || 0,
+      table_cash: tableData.table_cash || 0,
+      table_card: tableData.table_card || 0
+    }];
+    
+    // Calcular promedio del ticket
+    if (dailyCutResult[0].today_orders > 0) {
+      dailyCutResult[0].today_avg_ticket = parseFloat((dailyCutResult[0].today_sales / dailyCutResult[0].today_orders).toFixed(2));
+    }
     
     const totalOrders = revenueResult[0]?.total_orders || 0
-    const totalSales = revenueResult[0]?.total_sales || 0
+    const totalSales = parseFloat(revenueResult[0]?.total_sales || '0')
     const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0
     
-    // Productos más vendidos con información de costos
+    // Productos más vendidos con información de costos - INCLUIR TODAS LAS ÓRDENES
     const [ordersWithItems] = await conn.execute(`
       SELECT items FROM orders 
-      WHERE created_at >= ? AND status IN ("completed", "delivered", "pendiente")
+      WHERE created_at >= ? AND items IS NOT NULL AND items != ''
     `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
     
     // Obtener información de productos con costos
@@ -120,9 +155,9 @@ export async function GET(request: NextRequest) {
         for (const item of items) {
           const key = item.name
           const productInfo = productInfoMap.get(item.name)
-          const itemPrice = parseFloat(item.price)
+          const itemPrice = parseFloat(item.price) || 0
           const itemCost = productInfo?.cost_price || 0
-          const itemQuantity = item.quantity
+          const itemQuantity = parseInt(item.quantity) || 0
           
           const itemSales = itemQuantity * itemPrice
           const itemCostTotal = itemQuantity * itemCost
@@ -154,50 +189,125 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Calcular márgenes de ganancia
+    // Calcular márgenes de ganancia y ganancia total
     const productsArray = Array.from(productStats.values()).map((product: any) => ({
       ...product,
       profitMargin: product.sales > 0 ? (product.profit / product.sales) * 100 : 0
     }))
     
+    // Calcular ganancia total del período
+    const totalProfit = productsArray.reduce((sum, product) => sum + product.profit, 0)
+    const totalCost = productsArray.reduce((sum, product) => sum + product.cost, 0)
+    const totalProfitMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0
+    
     const productsResult = productsArray
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10)
     
-    // Ventas diarias
+    // Ventas diarias - INCLUIR TODAS LAS ÓRDENES
     const [dailyResult] = await conn.execute(`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as orders,
         SUM(total) as total_sales
       FROM orders 
-      WHERE created_at >= ? AND status IN ("completed", "delivered", "pendiente")
+      WHERE created_at >= ?
       GROUP BY DATE(created_at)
-      ORDER BY date DESC
+      ORDER BY date ASC
     `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
     
-    // Patrones horarios
+    // Patrones horarios - INCLUIR TODAS LAS ÓRDENES
     const [hourlyResult] = await conn.execute(`
       SELECT 
         HOUR(created_at) as hour,
         COUNT(*) as orders
       FROM orders 
-      WHERE created_at >= ? AND status IN ("completed", "delivered", "pendiente")
+      WHERE created_at >= ?
       GROUP BY HOUR(created_at)
       ORDER BY hour
     `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
     
-    // Métodos de pago
-    const [paymentResult] = await conn.execute(`
+    // Métodos de pago unificados (órdenes online + pagos de mesa)
+    const [onlinePaymentMethods] = await conn.execute(`
+      SELECT 
+        COALESCE(payment_method, 'No especificado') as method,
+        COUNT(*) as count,
+        SUM(total) as sales,
+        'online' as source
+      FROM orders 
+      WHERE created_at >= ? AND waiter_order != 1
+      GROUP BY payment_method
+    `, [startDate.toISOString().slice(0, 19).replace('T', ' ')]) as any[]
+    
+    const [tablePaymentMethods] = await conn.execute(`
       SELECT 
         payment_method as method,
         COUNT(*) as count,
-        SUM(total) as sales
-      FROM orders 
-      WHERE created_at >= ? AND status IN ("completed", "delivered", "pendiente")
+        SUM(total_amount) as sales,
+        'table' as source
+      FROM payments 
+      WHERE payment_date >= ?
       GROUP BY payment_method
-      ORDER BY sales DESC
-    `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
+    `, [startDate.toISOString().slice(0, 19).replace('T', ' ')]) as any[]
+    
+    // Combinar métodos de pago
+    const paymentMethodsMap = new Map()
+    
+    // Procesar pagos online
+    for (const payment of onlinePaymentMethods as any[]) {
+      const method = payment.method
+      if (paymentMethodsMap.has(method)) {
+        const existing = paymentMethodsMap.get(method)
+        paymentMethodsMap.set(method, {
+          method,
+          count: existing.count + payment.count,
+          sales: existing.sales + parseFloat(payment.sales || 0),
+          online_count: existing.online_count + payment.count,
+          online_sales: existing.online_sales + parseFloat(payment.sales || 0),
+          table_count: existing.table_count,
+          table_sales: existing.table_sales
+        })
+      } else {
+        paymentMethodsMap.set(method, {
+          method,
+          count: payment.count,
+          sales: parseFloat(payment.sales || 0),
+          online_count: payment.count,
+          online_sales: parseFloat(payment.sales || 0),
+          table_count: 0,
+          table_sales: 0
+        })
+      }
+    }
+    
+    // Procesar pagos de mesa
+    for (const payment of tablePaymentMethods as any[]) {
+      const method = payment.method
+      if (paymentMethodsMap.has(method)) {
+        const existing = paymentMethodsMap.get(method)
+        paymentMethodsMap.set(method, {
+          method,
+          count: existing.count + payment.count,
+          sales: existing.sales + parseFloat(payment.sales || 0),
+          online_count: existing.online_count,
+          online_sales: existing.online_sales,
+          table_count: existing.table_count + payment.count,
+          table_sales: existing.table_sales + parseFloat(payment.sales || 0)
+        })
+      } else {
+        paymentMethodsMap.set(method, {
+          method,
+          count: payment.count,
+          sales: parseFloat(payment.sales || 0),
+          online_count: 0,
+          online_sales: 0,
+          table_count: payment.count,
+          table_sales: parseFloat(payment.sales || 0)
+        })
+      }
+    }
+    
+    const paymentResult = Array.from(paymentMethodsMap.values()).sort((a, b) => b.sales - a.sales)
     
     // Status de órdenes
     const [statusResult] = await conn.execute(`
@@ -210,10 +320,31 @@ export async function GET(request: NextRequest) {
       ORDER BY count DESC
     `, [startDate.toISOString().slice(0, 19).replace('T', ' ')])
 
+    // Calcular crecimiento real comparando con período anterior
+    const previousStartDate = new Date(startDate)
+    previousStartDate.setDate(previousStartDate.getDate() - period)
+    
+    const [previousPeriodResult] = await conn.execute(
+      'SELECT COUNT(*) as prev_orders, SUM(total) as prev_sales FROM orders WHERE created_at >= ? AND created_at < ?',
+      [previousStartDate.toISOString().slice(0, 19).replace('T', ' '), startDate.toISOString().slice(0, 19).replace('T', ' ')]
+    ) as any[]
+    
+    const prevOrders = previousPeriodResult[0]?.prev_orders || 0
+    const prevSales = parseFloat(previousPeriodResult[0]?.prev_sales || '0')
+    
+    const salesGrowth = prevSales > 0 ? ((totalSales - prevSales) / prevSales) * 100 : 0
+    const ordersGrowth = prevOrders > 0 ? ((totalOrders - prevOrders) / prevOrders) * 100 : 0
+    const avgTicketGrowth = prevOrders > 0 && totalOrders > 0 ? 
+      ((averageTicket - (prevSales / prevOrders)) / (prevSales / prevOrders)) * 100 : 0
+
     const reportData = {
       totalSales: parseFloat(totalSales?.toString() || '0'),
       totalOrders: parseInt(totalOrders?.toString() || '0'),
       averageTicket: parseFloat(averageTicket.toFixed(2)),
+      // Métricas de ganancia
+      totalProfit: parseFloat(totalProfit.toFixed(2)),
+      totalCost: parseFloat(totalCost.toFixed(2)),
+      totalProfitMargin: parseFloat(totalProfitMargin.toFixed(2)),
       topProducts: productsResult,
       dailySales: dailyResult,
       hourlyPattern: hourlyResult,
@@ -223,9 +354,9 @@ export async function GET(request: NextRequest) {
       salesByWaiter: waiterResult,
       dailyCut: (dailyCutResult as any[])[0],
       growth: {
-        sales: 12.5,
-        orders: 8.3,
-        avgTicket: 4.2
+        sales: parseFloat(salesGrowth.toFixed(1)),
+        orders: parseFloat(ordersGrowth.toFixed(1)),
+        avgTicket: parseFloat(avgTicketGrowth.toFixed(1))
       },
       paymentMethods: paymentResult,
       ordersByStatus: statusResult

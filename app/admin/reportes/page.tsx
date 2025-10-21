@@ -58,6 +58,10 @@ interface ReportData {
   totalSales: number
   totalOrders: number
   averageTicket: number
+  // Métricas de ganancia
+  totalProfit: number
+  totalCost: number
+  totalProfitMargin: number
   topProducts: Array<{
     name: string
     quantity: number
@@ -273,6 +277,20 @@ export default function ReportesPage() {
       const ws5 = XLSX.utils.aoa_to_sheet(productsData)
       XLSX.utils.book_append_sheet(wb, ws5, 'Productos Más Vendidos')
     }
+
+    // Hoja 6: Resumen de Ganancias
+    const profitData = [
+      ['Métrica', 'Valor'],
+      ['Ventas Totales', reportData.totalSales || 0],
+      ['Costos Totales', reportData.totalCost || 0],
+      ['Ganancia Total', reportData.totalProfit || 0],
+      ['Margen de Ganancia (%)', reportData.totalProfitMargin || 0],
+      ['Efectivo', reportData.dailyCut?.cash_sales || 0],
+      ['Tarjetas', reportData.dailyCut?.card_sales || 0],
+      ['MercadoPago', reportData.dailyCut?.mp_sales || 0]
+    ]
+    const ws6 = XLSX.utils.aoa_to_sheet(profitData)
+    XLSX.utils.book_append_sheet(wb, ws6, 'Resumen de Ganancias')
 
     const fileName = `Reporte_Ventas_${useCustomRange ? format(startDate, 'dd-MM-yyyy') + '_a_' + format(endDate, 'dd-MM-yyyy') : 'ultimos_' + selectedPeriod + '_dias'}.xlsx`
     XLSX.writeFile(wb, fileName)
@@ -704,6 +722,36 @@ export default function ReportesPage() {
                   <div className="text-center p-4 bg-slate-700/30 rounded-lg">
                     <p className="text-3xl font-bold text-cyan-400">{formatCurrency(reportData.dailyCut?.mp_sales || 0)}</p>
                     <p className="text-sm text-slate-400 mt-1">MercadoPago</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Métricas de Ganancia */}
+            <Card className="bg-gradient-to-br from-emerald-900/40 to-emerald-800/20 border-emerald-500/30 backdrop-blur-sm mb-8">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Target className="h-6 w-6 text-emerald-400" />
+                  Análisis de Ganancias - {format(new Date(), 'dd MMMM yyyy', { locale: es })}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="text-center p-6 bg-slate-700/30 rounded-lg border border-emerald-500/20">
+                    <p className="text-4xl font-bold text-green-400">{formatCurrency(reportData.totalSales || 0)}</p>
+                    <p className="text-sm text-slate-400 mt-2">Ventas Totales</p>
+                  </div>
+                  <div className="text-center p-6 bg-slate-700/30 rounded-lg border border-red-500/20">
+                    <p className="text-4xl font-bold text-red-400">{formatCurrency(reportData.totalCost || 0)}</p>
+                    <p className="text-sm text-slate-400 mt-2">Costos Totales</p>
+                  </div>
+                  <div className="text-center p-6 bg-slate-700/30 rounded-lg border border-emerald-500/20">
+                    <p className="text-4xl font-bold text-emerald-400">{formatCurrency(reportData.totalProfit || 0)}</p>
+                    <p className="text-sm text-slate-400 mt-2">Ganancia Total</p>
+                  </div>
+                  <div className="text-center p-6 bg-slate-700/30 rounded-lg border border-yellow-500/20">
+                    <p className="text-4xl font-bold text-yellow-400">{(reportData.totalProfitMargin || 0).toFixed(1)}%</p>
+                    <p className="text-sm text-slate-400 mt-2">Margen de Ganancia</p>
                   </div>
                 </div>
               </CardContent>

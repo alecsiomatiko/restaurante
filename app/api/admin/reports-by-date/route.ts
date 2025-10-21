@@ -18,22 +18,22 @@ export async function GET(request: NextRequest) {
     const pool = getPool()
     const conn = await pool.getConnection()
 
-    // Total de ventas y pedidos
+    // Total de ventas y pedidos - SIN FILTROS RESTRICTIVOS
     const [salesResult] = await conn.execute(
-      'SELECT COUNT(*) as total_orders, SUM(total) as total_sales FROM orders WHERE created_at >= ? AND created_at <= ? AND status IN ("completed", "delivered", "pendiente", "preparando", "en_camino")',
+      'SELECT COUNT(*) as total_orders, SUM(total) as total_sales FROM orders WHERE created_at >= ? AND created_at <= ?',
       [startDate.toISOString().slice(0, 19).replace('T', ' '), endDate.toISOString().slice(0, 19).replace('T', ' ')]
     ) as any[]
 
-    // Ventas por día
+    // Ventas por día - INCLUIR TODAS LAS ÓRDENES
     const [dailyResult] = await conn.execute(`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as orders,
         SUM(total) as total_sales
       FROM orders 
-      WHERE created_at >= ? AND created_at <= ? AND status IN ("completed", "delivered", "pendiente")
+      WHERE created_at >= ? AND created_at <= ?
       GROUP BY DATE(created_at)
-      ORDER BY date DESC
+      ORDER BY date ASC
     `, [startDate.toISOString().slice(0, 19).replace('T', ' '), endDate.toISOString().slice(0, 19).replace('T', ' ')])
 
     // Ventas por mesa
@@ -63,10 +63,10 @@ export async function GET(request: NextRequest) {
       ORDER BY waiter_sales DESC
     `, [startDate.toISOString().slice(0, 19).replace('T', ' '), endDate.toISOString().slice(0, 19).replace('T', ' ')])
 
-    // Productos más vendidos
+    // Productos más vendidos - INCLUIR TODAS LAS ÓRDENES
     const [ordersWithItems] = await conn.execute(`
       SELECT items FROM orders 
-      WHERE created_at >= ? AND created_at <= ? AND status IN ("completed", "delivered", "pendiente")
+      WHERE created_at >= ? AND created_at <= ? AND items IS NOT NULL AND items != ''
     `, [startDate.toISOString().slice(0, 19).replace('T', ' '), endDate.toISOString().slice(0, 19).replace('T', ' ')])
 
     const productStats = new Map()

@@ -127,27 +127,27 @@ export default function CheckoutMeseroPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-100 via-white to-yellow-200 py-4 sm:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 py-4 sm:py-8">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-yellow-800 mb-2">Checkout - Mesero</h1>
-          <p className="text-yellow-700">Agrega productos a una mesa existente o crea una nueva mesa</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent mb-2">Checkout - Mesero</h1>
+          <p className="text-purple-200">Agrega productos a una mesa existente o crea una nueva mesa</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Mesa Selection */}
           <div className="space-y-6">
             {/* Mesas Abiertas */}
-            <Card className="backdrop-blur-md bg-white/80 border-none shadow-lg">
+            <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-yellow-800 flex items-center">
+                <CardTitle className="text-white flex items-center">
                   <UserCheck className="h-5 w-5 mr-2" />
                   Seleccionar Mesa
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {loadingMesas ? (
-                  <div className="flex items-center gap-2 text-yellow-600">
+                  <div className="flex items-center gap-2 text-purple-300">
                     <Loader2 className="animate-spin h-5 w-5" />
                     <span>Cargando mesas...</span>
                   </div>
@@ -155,7 +155,7 @@ export default function CheckoutMeseroPage() {
                   <>
                     {mesasAbiertas.length > 0 && (
                       <div>
-                        <Label className="text-yellow-800 mb-3 block font-semibold">
+                        <Label className="text-white mb-3 block font-semibold">
                           Mesas Abiertas ({mesasAbiertas.length}):
                         </Label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -163,10 +163,10 @@ export default function CheckoutMeseroPage() {
                             <button
                               key={mesa.tableName}
                               type="button"
-                              className={`p-4 rounded-lg border transition-all text-left ${
+                              className={`p-4 rounded-lg border transition-all text-left backdrop-blur-sm ${
                                 mesaSeleccionada === mesa.tableName 
-                                  ? 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-md' 
-                                  : 'bg-white text-yellow-800 border-yellow-200 hover:bg-yellow-50 hover:border-yellow-300'
+                                  ? 'bg-purple-600/80 text-white border-purple-400 shadow-lg' 
+                                  : 'bg-white/10 text-purple-200 border-purple-500/30 hover:bg-white/20 hover:border-purple-400/50'
                               }`}
                               onClick={() => {
                                 setMesaSeleccionada(mesa.tableName)
@@ -190,7 +190,7 @@ export default function CheckoutMeseroPage() {
                             </button>
                           ))}
                         </div>
-                        <div className="mt-3 text-xs text-yellow-600 bg-yellow-50 p-2 rounded">
+                        <div className="mt-3 text-xs text-purple-300 bg-purple-800/20 backdrop-blur-sm p-3 rounded-lg border border-purple-500/30">
                           💡 Selecciona una mesa existente para agregar productos a esa mesa
                         </div>
                       </div>
@@ -198,7 +198,7 @@ export default function CheckoutMeseroPage() {
 
                     {/* Nueva Mesa */}
                     <div className="mt-6">
-                      <Label htmlFor="nueva-mesa" className="text-yellow-800 font-semibold">
+                      <Label htmlFor="nueva-mesa" className="text-white font-semibold">
                         O crear nueva mesa:
                       </Label>
                       <Input
@@ -208,21 +208,21 @@ export default function CheckoutMeseroPage() {
                           setNuevaMesa(e.target.value)
                           if (e.target.value) setMesaSeleccionada('') // Clear selected if typing new
                         }}
-                        className="mt-2 bg-white border-yellow-300 focus:border-yellow-500"
+                        className="mt-2 bg-white/10 border-purple-500/30 focus:border-purple-400 text-white placeholder:text-purple-300 backdrop-blur-sm"
                         placeholder="Ej: Mesa 8, Terraza 2, VIP 1..."
                       />
                     </div>
 
                     {/* Notas */}
                     <div>
-                      <Label htmlFor="notas" className="text-yellow-800 font-semibold">
+                      <Label htmlFor="notas" className="text-white font-semibold">
                         Notas adicionales (opcional):
                       </Label>
                       <Textarea
                         id="notas"
                         value={notas}
                         onChange={(e) => setNotas(e.target.value)}
-                        className="mt-2 bg-white border-yellow-300 focus:border-yellow-500"
+                        className="mt-2 bg-white/10 border-purple-500/30 focus:border-purple-400 text-white placeholder:text-purple-300 backdrop-blur-sm"
                         placeholder="Instrucciones especiales, alergias, preferencias..."
                         rows={3}
                       />
@@ -235,37 +235,37 @@ export default function CheckoutMeseroPage() {
 
           {/* Right Column - Order Summary */}
           <div className="space-y-6">
-            <Card className="backdrop-blur-md bg-white/80 border-none shadow-lg">
+            <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-yellow-800 flex items-center">
+                <CardTitle className="text-white flex items-center">
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Resumen del Pedido
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-purple-800/20 backdrop-blur-sm rounded-lg border border-purple-500/30">
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-800">{item.name}</h4>
-                      <p className="text-sm text-gray-600">${Number(item.price).toFixed(2)} c/u</p>
+                      <h4 className="font-medium text-white">{item.name}</h4>
+                      <p className="text-sm text-purple-300">${Number(item.price).toFixed(2)} c/u</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 bg-white/10 border-purple-500/30 text-white hover:bg-white/20"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <Badge variant="secondary" className="min-w-[2rem] text-center">
+                      <Badge className="min-w-[2rem] text-center bg-purple-600 text-white border-none">
                         {item.quantity}
                       </Badge>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="h-8 w-8 p-0"
+                        className="h-8 w-8 p-0 bg-white/10 border-purple-500/30 text-white hover:bg-white/20"
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
@@ -273,7 +273,7 @@ export default function CheckoutMeseroPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => removeItem(item.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        className="h-8 w-8 p-0 bg-red-600/20 border-red-500/30 text-red-400 hover:bg-red-600/30 hover:text-red-300"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -281,8 +281,8 @@ export default function CheckoutMeseroPage() {
                   </div>
                 ))}
 
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center text-xl font-bold text-yellow-800">
+                <div className="border-t border-purple-500/30 pt-4">
+                  <div className="flex justify-between items-center text-xl font-bold text-white">
                     <span>Total:</span>
                     <span>${Number(total).toFixed(2)}</span>
                   </div>
@@ -292,7 +292,7 @@ export default function CheckoutMeseroPage() {
                 <Button
                   onClick={handleSubmit}
                   disabled={isProcessing || (!mesaSeleccionada && !nuevaMesa.trim())}
-                  className="w-full bg-yellow-600 hover:bg-yellow-700 text-white text-lg py-6"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-lg py-6"
                 >
                   {isProcessing ? (
                     <>
@@ -308,7 +308,7 @@ export default function CheckoutMeseroPage() {
                 </Button>
 
                 {/* Info */}
-                <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded">
+                <div className="text-xs text-purple-300 bg-purple-800/20 backdrop-blur-sm p-3 rounded-lg border border-purple-500/30">
                   <p className="font-semibold mb-1">Información:</p>
                   <p>• Los productos se agregarán a la mesa seleccionada</p>
                   <p>• Pago siempre en efectivo (mesero)</p>

@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-notifications'
 
 export default function RegisterPage() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -26,8 +27,13 @@ export default function RegisterPage() {
   const toast = useToast()
 
   const validateForm = () => {
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       setError('Por favor, completa todos los campos')
+      return false
+    }
+
+    if (name.length < 2) {
+      setError('El nombre debe tener al menos 2 caracteres')
       return false
     }
 
@@ -60,7 +66,7 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      const result = await register(email, password)
+      const result = await register(name, email, password)
       
       if (result.success) {
         toast.success('¡Cuenta creada!', 'Tu cuenta ha sido creada exitosamente')
@@ -103,6 +109,25 @@ export default function RegisterPage() {
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
+
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-white">
+                  Nombre completo
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-purple-300" />
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="Tu nombre completo"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10 bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-white">

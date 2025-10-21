@@ -16,7 +16,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>
-  register: (email: string, password: string) => Promise<{ success: boolean; message?: string }>
+  register: (name: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>
   logout: () => Promise<void>
   isLoading: boolean
   refreshUser: () => Promise<void>
@@ -78,14 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const register = async (email: string, password: string) => {
+  const register = async (name: string, email: string, password: string) => {
     try {
       const response = await fetch('/api/auth/register-mysql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       })
 
       const data = await response.json()

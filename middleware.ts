@@ -124,7 +124,8 @@ export async function middleware(req: NextRequest) {
               // Si es driver puro (no admin), bloquear acceso a rutas normales (menú, checkout, etc.)
               if (!response) {
                 const isDriverOnly = user.is_driver && !user.is_admin;
-                const isRestrictedForDriver = ['/menu', '/checkout', '/orders'].some(route => path.startsWith(route));
+                const isRestrictedForDriver = ['/menu', '/checkout'].some(route => path.startsWith(route)) ||
+                  (path.startsWith('/orders') && !path.startsWith('/orders/thank-you'));
                 if (isDriverOnly && isRestrictedForDriver) {
                   console.log('🚫 Driver intentando acceder a ruta restringida, redirigiendo a dashboard');
                   response = NextResponse.redirect(new URL('/driver/dashboard', req.url));

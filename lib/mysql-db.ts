@@ -182,6 +182,49 @@ export async function getUserOrders(userId: number) {
   }
 }
 
+export async function getOrder(orderId: number) {
+  try {
+    const query = `
+      SELECT 
+        o.*,
+        u.username,
+        u.email as customer_email,
+        o.customer_name,
+        o.customer_phone,
+        o.delivery_address,
+        o.total,
+        o.payment_method,
+        o.status,
+        o.created_at
+      FROM orders o 
+      LEFT JOIN users u ON o.user_id = u.id 
+      WHERE o.id = ?
+    `
+    const orders = await executeQuery(query, [orderId]) as any[]
+    
+    if (orders.length === 0) {
+      return null
+    }
+    
+    const order = orders[0]
+    
+    // Parsear items si existen
+    if (order.items && typeof order.items === 'string') {
+      try {
+        order.items = JSON.parse(order.items)
+      } catch (e) {
+        console.error('Error parsing order items:', e)
+        order.items = []
+      }
+    }
+    
+    return order
+  } catch (error) {
+    console.error('Error getting order:', error)
+    return null
+  }
+}
+
 export async function getAllOrders(status?: string | null, after?: string | null) {
   try {
     let query = `SELECT o.*, u.username FROM orders o LEFT JOIN users u ON o.user_id = u.id`

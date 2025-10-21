@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -32,7 +32,14 @@ import {
 import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-notifications'
-import { useAddressValidation } from '@/hooks/use-address-validation'
+
+// Declarar Google como variable global
+declare global {
+  interface Window {
+    google?: any
+    initMap?: () => void
+  }
+}
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -41,7 +48,6 @@ export default function CheckoutPage() {
   const toast = useToast()
 
   // Helper function to determine if user should use mesero checkout
-  // Only pure waiters (not admin or driver) use special mesero checkout
   const shouldUseMeseroCheckout = (user: any) => {
     return user?.is_waiter && !user?.is_admin && !user?.is_driver
   }
@@ -60,7 +66,6 @@ export default function CheckoutPage() {
     email: user?.email || '',
   })
   
-  // For mesero: table name/number and mesa abierta
   const [tableInfo, setTableInfo] = useState({
     table: '',
     notes: '',
@@ -68,6 +73,119 @@ export default function CheckoutPage() {
   const [mesasAbiertas, setMesasAbiertas] = useState<any[]>([]);
   const [mesaSeleccionada, setMesaSeleccionada] = useState<string>('');
   const [loadingMesas, setLoadingMesas] = useState(false);
+  
+  const [deliveryInfo, setDeliveryInfo] = useState({
+    address: '',
+    notes: '',
+  })
+  const [orderType, setOrderType] = useState<'delivery' | 'pickup'>('pickup')
+  const [paymentMethod, setPaymentMethod] = useState('efectivo')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false)
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
+  
+  // Google Maps y direcciones
+  const addressInputRef = useRef<HTMLInputElement>(null)
+  const mapRef = useRef<HTMLDivElement>(null)
+  const [map, setMap] = useState<any>(null)
+  const [marker, setMarker] = useState<any>(null)
+  const [autocomplete, setAutocomplete] = useState<any>(null)
+  const [showMap, setShowMap] = useState(false)
+  const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null)
+  const [validatedAddress, setValidatedAddress] = useState<string | null>(null)
+  const [addressValidated, setAddressValidated] = useState(false)
+
+  // Cargar Google Maps API
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.google) {
+      const script = document.createElement('script')
+      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyAAEDbSXamj1l-ThrvFqyrBWOo9rMdKQLU&libraries=places&callback=initMap`
+      script.async = true
+      script.defer = true
+      
+      window.initMap = () => {
+        if (addressInputRef.current && window.google) {
+          initializeAutocomplete()
+        }
+      }
+      
+      document.head.appendChild(script)
+    } else if (window.google && addressInputRef.current) {
+      initializeAutocomplete()
+    }
+  }, [orderType])
+
+  // Inicializar Google Places Autocomplete
+  const initializeAutocomplete = () => {
+    if (!window.google || !addressInputRef.current) return
+    
+    const autocompleteInstance = new window.google.maps.places.Autocomplete(
+      addressInputRef.current,
+      {
+        types: ['address'],
+        componentRestrictions: { country: 'ar' },
+        fields: ['formatted_address', 'geometry', 'name']
+      }
+    )
+    
+    setAutocomplete(autocompleteInstance)
+    
+    autocompleteInstance.addListener('place_changed', () => {
+      const place = autocompleteInstance.getPlace()
+      
+      if (place.geometry && place.geometry.location) {
+        const lat = place.geometry.location.lat()
+        const lng = place.geometry.location.lng()
+        const address = place.formatted_address || place.name
+        
+        setDeliveryInfo(prev => ({ ...prev, address }))
+        setCoordinates({ lat, lng })
+        setValidatedAddress(address)
+        setAddressValidated(true)
+        setShowMap(true)
+        
+        // Inicializar mapa
+        initializeMap(lat, lng, address)
+      }
+    })
+  }
+
+  // Inicializar el mapa
+  const initializeMap = (lat: number, lng: number, address: string) => {
+    if (!mapRef.current || !window.google) return
+    
+    const mapInstance = new window.google.maps.Map(mapRef.current, {
+      center: { lat, lng },
+      zoom: 16,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+    })
+    
+    const markerInstance = new window.google.maps.Marker({
+      position: { lat, lng },
+      map: mapInstance,
+      title: address,
+      animation: window.google.maps.Animation.DROP,
+    })
+    
+    setMap(mapInstance)
+    setMarker(markerInstance)
+  }
+  
+  // Limpiar validación cuando cambia la dirección manualmente
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setDeliveryInfo(prev => ({ ...prev, address: value }))
+    
+    if (value !== validatedAddress) {
+      setAddressValidated(false)
+      setValidatedAddress(null)
+      setShowMap(false)
+      setCoordinates(null)
+    }
+  }
+
   // Fetch mesas abiertas para mesero
   useEffect(() => {
     if (shouldUseMeseroCheckout(user)) {
@@ -81,27 +199,13 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  const [deliveryInfo, setDeliveryInfo] = useState({
-    type: 'delivery', // 'delivery' or 'pickup'
-    address: '',
-    notes: '',
-  })
-  
-  const [paymentMethod, setPaymentMethod] = useState('efectivo')
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [errors, setErrors] = useState<{ [key: string]: string }>({})
-  const [validatedAddress, setValidatedAddress] = useState<string | null>(null)
-  const [addressValidated, setAddressValidated] = useState(false)
-  
-  // Address validation hook
-  const { validateAddress, isValidating } = useAddressValidation()
-
-  // Redirect if cart is empty
+  // Redirect if cart is empty (but not if checkout was successful)
   useEffect(() => {
-    if (itemCount === 0) {
+    if (itemCount === 0 && !checkoutSuccess && !isProcessing) {
+      console.log('🔄 Carrito vacío, redirigiendo al menú...')
       router.push('/menu')
     }
-  }, [itemCount, router])
+  }, [itemCount, router, checkoutSuccess, isProcessing])
 
   // Pre-fill user email if logged in
   useEffect(() => {
@@ -110,20 +214,26 @@ export default function CheckoutPage() {
     }
   }, [user])
 
+  // Limpiar carrito después de redirección exitosa
+  useEffect(() => {
+    if (checkoutSuccess) {
+      // Dar tiempo para que la redirección se procese
+      const timer = setTimeout(() => {
+        clearCart()
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [checkoutSuccess, clearCart])
+
   const validateForm = () => {
     let newErrors: { [key: string]: string } = {}
+    
     if (shouldUseMeseroCheckout(user)) {
-      // Solo validar mesa para mesero
       if (!mesaSeleccionada && !tableInfo.table.trim()) {
         newErrors.table = 'Selecciona una mesa o crea una nueva'
       }
-    }
-    // Limpiar error de mesa si no es mesero
-    if (!shouldUseMeseroCheckout(user) && newErrors.table) {
-      delete newErrors.table;
-    }
-    // Validar datos de cliente siempre que NO sea mesero
-    if (!shouldUseMeseroCheckout(user)) {
+    } else {
       if (!customerInfo.name.trim()) {
         newErrors.name = 'El nombre es requerido'
       }
@@ -137,19 +247,15 @@ export default function CheckoutPage() {
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email)) {
         newErrors.email = 'Formato de email inválido'
       }
-      if (deliveryInfo.type === 'delivery' && !deliveryInfo.address.trim()) {
-        newErrors.address = 'La dirección es requerida para delivery'
+      
+      if (orderType === 'delivery') {
+        if (!deliveryInfo.address.trim()) {
+          newErrors.address = 'La dirección es requerida'
+        }
+        // La validación en Maps es opcional - se removió la validación obligatoria
       }
     }
-    // DEBUG: Mostrar errores y valores
-    console.log('validateForm', {
-      user,
-      customerInfo,
-      deliveryInfo,
-      mesaSeleccionada,
-      tableInfo,
-      newErrors
-    });
+    
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -161,35 +267,42 @@ export default function CheckoutPage() {
       return
     }
     setIsProcessing(true)
+
     try {
-      let orderData: any = {}
+      let orderData: any
       if (shouldUseMeseroCheckout(user)) {
-        // Mesero: mesa, notas, no pago, tipo especial
         orderData = {
           customer_info: customerInfo,
           table: mesaSeleccionada ? mesaSeleccionada : tableInfo.table,
           notes: tableInfo.notes,
-          waiter_order: true
+          delivery_type: 'dine_in'
         }
       } else {
         orderData = {
           customer_info: customerInfo,
-          delivery_address: deliveryInfo.type === 'delivery' ? deliveryInfo.address : null,
+          delivery_address: orderType === 'delivery' ? deliveryInfo.address : null,
+          delivery_coordinates: orderType === 'delivery' && coordinates ? 
+            `${coordinates.lat},${coordinates.lng}` : null,
           payment_method: paymentMethod,
           notes: deliveryInfo.notes,
-          delivery_type: deliveryInfo.type
+          delivery_type: orderType
         }
       }
+      
       const result = await createOrder(orderData)
+      console.log('🔍 Resultado de createOrder:', result)
+      
       if (result.success) {
+        console.log('✅ Pedido creado exitosamente, orderId:', result.orderId)
+        
         if (shouldUseMeseroCheckout(user)) {
           clearCart()
-          // Redirigir a la página de mesas abiertas
           router.push('/mesero/mesas-abiertas')
           return
         }
-        // Si el método de pago es Mercado Pago, crear preferencia y redirigir
+        
         if (paymentMethod === 'mercadopago') {
+          console.log('💳 Procesando pago con MercadoPago...')
           const mpResponse = await fetch('/api/mercadopago/create-preference', {
             method: 'POST',
             headers: {
@@ -200,7 +313,7 @@ export default function CheckoutPage() {
                 id: item.id,
                 name: item.name,
                 description: item.name,
-                price: item.price,
+                price: Number(item.price),
                 quantity: item.quantity
               })),
               orderId: result.orderId,
@@ -212,122 +325,142 @@ export default function CheckoutPage() {
               }
             })
           })
-          if (mpResponse.ok) {
-            const mpData = await mpResponse.json()
-            window.location.href = mpData.init_point
-            return
+
+          const mpData = await mpResponse.json()
+          if (mpData.success) {
+            console.log('✅ Preferencia de MercadoPago creada, redirigiendo...')
+            setCheckoutSuccess(true)
+            window.location.href = mpData.initPoint
           } else {
-            const error = await mpResponse.json()
-            toast.error('Error', error.error || 'Error al crear preferencia de pago')
-            setIsProcessing(false)
+            console.error('❌ Error en MercadoPago:', mpData)
+            toast.error('Error', 'No se pudo procesar el pago')
+          }
+        } else {
+          console.log('💰 Pago en efectivo, redirigiendo a thank you...')
+          console.log('📋 OrderId recibido:', result.orderId)
+          console.log('💳 Payment method:', paymentMethod)
+          
+          if (!result.orderId) {
+            console.error('❌ Error: orderId es undefined o null')
+            toast.error('Error', 'No se pudo obtener el ID del pedido')
             return
           }
+          
+          // Marcar checkout como exitoso ANTES de limpiar carrito
+          setCheckoutSuccess(true)
+          
+          const thankYouUrl = `/orders/thank-you?orderId=${result.orderId}&payment=${paymentMethod}&status=success`
+          console.log('🔗 Redirigiendo a:', thankYouUrl)
+          
+          // Usar window.location.href para navegación forzada
+          window.location.href = thankYouUrl
         }
-        clearCart()
-        const thankYouUrl = `/orders/thank-you?orderId=${result.orderId}&payment=${paymentMethod}`
-        window.location.href = thankYouUrl
       } else {
-        toast.error('Error al crear pedido', result.message || 'Intenta de nuevo')
+        toast.error('Error', result.message || 'No se pudo crear el pedido')
       }
     } catch (error) {
-      console.error('Error en checkout:', error)
-      toast.error('Error', 'Error de conexión. Intenta de nuevo.')
+      console.error('Error creating order:', error)
+      toast.error('Error', 'No se pudo procesar el pedido')
     } finally {
       setIsProcessing(false)
     }
   }
 
-  const calculateDeliveryFee = () => {
-    return deliveryInfo.type === 'delivery' ? 25 : 0
-  }
-
-  const finalTotal = total + calculateDeliveryFee()
+  const deliveryTotal = orderType === 'delivery' ? total + 25 : total
 
   if (itemCount === 0) {
-    return null // Will redirect
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20 p-8">
+          <div className="text-center">
+            <ShoppingCart className="h-16 w-16 mx-auto mb-4 text-purple-400" />
+            <h2 className="text-2xl font-bold text-white mb-2">Carrito vacío</h2>
+            <p className="text-purple-300 mb-4">No tienes productos en tu carrito</p>
+            <Button 
+              onClick={() => router.push('/menu')}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              Ver Menú
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 py-12">
-      {/* DEBUG: Mostrar errores en pantalla */}
-      {Object.keys(errors).length > 0 && (
-        <div style={{background:'#300',color:'#fff',padding:8,margin:8,borderRadius:8,fontSize:14}}>
-          <b>Errores detectados:</b>
-          <ul style={{margin:0,paddingLeft:16}}>
-            {Object.entries(errors).map(([k,v]) => (
-              <li key={k}>{k}: {v}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent mb-2">
-            Finalizar Pedido
-          </h1>
-          <p className="text-purple-200">Confirma tu orden galáctica</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Finalizar Pedido</h1>
+          <p className="text-purple-300">Completa tu información para continuar</p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column - Order Form */}
-          <div className="space-y-6">
-            {/* SOLO para mesero: selección/creación de mesa y notas */}
+
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Customer Info */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Mesa selection for mesero */}
             {shouldUseMeseroCheckout(user) ? (
-              <Card className="backdrop-blur-sm bg-white/10 border-yellow-500/20">
+              <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20">
                 <CardHeader>
-                  <CardTitle className="text-yellow-200 flex items-center">
+                  <CardTitle className="text-white flex items-center">
                     <UserCheck className="h-5 w-5 mr-2" />
-                    Selecciona una mesa abierta o crea una nueva
+                    Selección de Mesa
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {loadingMesas ? (
-                    <div className="flex items-center gap-2 text-yellow-300"><Loader2 className="animate-spin h-5 w-5" /> Cargando mesas...</div>
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-400" />
+                      <span className="ml-2 text-purple-300">Cargando mesas...</span>
+                    </div>
                   ) : (
                     <>
                       {mesasAbiertas.length > 0 && (
                         <div>
-                          <Label className="text-yellow-100 mb-1 block">Mesas abiertas ({mesasAbiertas.length}):</Label>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          <Label className="text-white">Mesas Abiertas</Label>
+                          <div className="grid grid-cols-2 gap-2 mt-2">
                             {mesasAbiertas.map((mesa) => (
-                              <button
-                                key={mesa.tableName}
+                              <Button
+                                key={mesa.table_name}
                                 type="button"
-                                className={`p-3 rounded-lg font-semibold border transition-all text-left ${mesaSeleccionada === mesa.tableName ? 'bg-yellow-400 text-yellow-900 border-yellow-500' : 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200'}`}
-                                onClick={() => setMesaSeleccionada(mesa.tableName)}
+                                variant={mesaSeleccionada === mesa.table_name ? "default" : "outline"}
+                                onClick={() => setMesaSeleccionada(mesa.table_name)}
+                                className="text-sm"
                               >
-                                <div className="font-bold">{mesa.tableName}</div>
-                                <div className="text-xs opacity-75">
-                                  {mesa.orderCount} pedidos - ${mesa.totalMesa.toFixed(2)}
-                                </div>
-                              </button>
+                                {mesa.table_name}
+                              </Button>
                             ))}
-                          </div>
-                          <div className="mt-2 text-xs text-yellow-300">
-                            Selecciona una mesa existente para agregar productos a esa mesa
                           </div>
                         </div>
                       )}
-                      <div className="mt-4">
-                        <Label htmlFor="table" className="text-yellow-100">Nueva mesa (nombre o número):</Label>
+                      
+                      <div>
+                        <Label htmlFor="table" className="text-white">Nueva Mesa</Label>
                         <Input
                           id="table"
                           value={tableInfo.table}
-                          onChange={e => setTableInfo(prev => ({ ...prev, table: e.target.value }))}
-                          className="bg-white/10 border-yellow-300/30 text-yellow-100 placeholder:text-yellow-300"
-                          placeholder="Ej: mesa 7, terraza, etc."
+                          onChange={(e) => {
+                            setTableInfo(prev => ({ ...prev, table: e.target.value }))
+                            setMesaSeleccionada('')
+                          }}
+                          className="bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
+                          placeholder="Número o nombre de mesa"
                         />
                         {errors.table && (
                           <p className="text-red-400 text-sm mt-1">{errors.table}</p>
                         )}
                       </div>
-                      <div className="mt-4">
-                        <Label htmlFor="notes" className="text-yellow-100">Notas adicionales (opcional)</Label>
+                      
+                      <div>
+                        <Label htmlFor="table-notes" className="text-white">Notas (opcional)</Label>
                         <Textarea
-                          id="notes"
+                          id="table-notes"
                           value={tableInfo.notes}
-                          onChange={e => setTableInfo(prev => ({ ...prev, notes: e.target.value }))}
-                          className="bg-white/10 border-yellow-300/30 text-yellow-100 placeholder:text-yellow-300"
-                          placeholder="Instrucciones especiales, preferencias..."
+                          onChange={(e) => setTableInfo(prev => ({ ...prev, notes: e.target.value }))}
+                          className="bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
+                          placeholder="Notas sobre la mesa o pedido..."
                           rows={2}
                         />
                       </div>
@@ -335,9 +468,8 @@ export default function CheckoutPage() {
                   )}
                 </CardContent>
               </Card>
-            ) : null}
-            {/* Campos de cliente para usuarios normales */}
-            {!shouldUseMeseroCheckout(user) && (
+            ) : (
+              /* Customer info for regular users */
               <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center">
@@ -389,8 +521,10 @@ export default function CheckoutPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Delivery Options - Only for non-mesero users */}
+            {!shouldUseMeseroCheckout(user) && (
               <>
-                {/* Delivery Options */}
                 <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20">
                   <CardHeader>
                     <CardTitle className="text-white flex items-center">
@@ -400,8 +534,8 @@ export default function CheckoutPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <RadioGroup 
-                      value={deliveryInfo.type} 
-                      onValueChange={(value) => setDeliveryInfo(prev => ({ ...prev, type: value }))}
+                      value={orderType} 
+                      onValueChange={(value: 'delivery' | 'pickup') => setOrderType(value)}
                     >
                       <div className="flex items-center space-x-2 p-3 rounded-lg bg-white/5 border border-purple-300/20">
                         <RadioGroupItem value="delivery" id="delivery" />
@@ -430,35 +564,92 @@ export default function CheckoutPage() {
                         </Label>
                       </div>
                     </RadioGroup>
-                    {deliveryInfo.type === 'delivery' && (
-                      <div>
-                        <Label htmlFor="address" className="text-white">Dirección de entrega *</Label>
-                        <Textarea
-                          id="address"
-                          value={deliveryInfo.address}
-                          onChange={(e) => setDeliveryInfo(prev => ({ ...prev, address: e.target.value }))}
-                          className="bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
-                          placeholder="Calle, número, colonia, referencias..."
-                          rows={3}
-                        />
-                        {errors.address && (
-                          <p className="text-red-400 text-sm mt-1">{errors.address}</p>
+
+                    {orderType === 'delivery' && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="address" className="text-white flex items-center justify-between">
+                            <div className="flex items-center">
+                              <MapPin className="h-4 w-4 mr-2" />
+                              Dirección de entrega *
+                            </div>
+                            <span className="text-purple-300 text-xs">Validación GPS opcional</span>
+                          </Label>
+                          <Input
+                            id="address"
+                            ref={addressInputRef}
+                            value={deliveryInfo.address}
+                            onChange={handleAddressChange}
+                            className="bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
+                            placeholder="Escribe tu dirección completa..."
+                            autoComplete="off"
+                          />
+                          {errors.address && (
+                            <p className="text-red-400 text-sm mt-1">{errors.address}</p>
+                          )}
+                          
+                          {/* Estado de validación opcional */}
+                          {deliveryInfo.address && (
+                            <div className="flex items-center justify-between mt-2">
+                              {addressValidated ? (
+                                <div className="flex items-center text-green-400 text-sm">
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Dirección validada con GPS
+                                </div>
+                              ) : (
+                                <div className="flex items-center text-blue-400 text-sm">
+                                  <AlertCircle className="h-4 w-4 mr-2" />
+                                  Usa sugerencias para mejor precisión (opcional)
+                                </div>
+                              )}
+                              
+                              {!addressValidated && deliveryInfo.address.length > 10 && (
+                                <div className="text-green-400 text-sm flex items-center">
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Dirección lista
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Información sobre validación opcional */}
+                          <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                            <p className="text-blue-300 text-sm">
+                              💡 <strong>Tip:</strong> Puedes escribir tu dirección manualmente o usar las sugerencias de Google Maps para mayor precisión.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Mapa automático */}
+                        {showMap && coordinates && (
+                          <div className="space-y-2">
+                            <Label className="text-white">Ubicación en el mapa</Label>
+                            <div 
+                              ref={mapRef}
+                              className="w-full h-64 rounded-lg border border-purple-300/30 bg-white/5"
+                            />
+                            <p className="text-purple-300 text-sm">
+                              📍 {validatedAddress}
+                            </p>
+                          </div>
                         )}
+                        
+                        <div>
+                          <Label htmlFor="notes" className="text-white">Notas adicionales (opcional)</Label>
+                          <Textarea
+                            id="notes"
+                            value={deliveryInfo.notes}
+                            onChange={(e) => setDeliveryInfo(prev => ({ ...prev, notes: e.target.value }))}
+                            className="bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
+                            placeholder="Instrucciones especiales, preferencias..."
+                            rows={2}
+                          />
+                        </div>
                       </div>
                     )}
-                    <div>
-                      <Label htmlFor="notes" className="text-white">Notas adicionales (opcional)</Label>
-                      <Textarea
-                        id="notes"
-                        value={deliveryInfo.notes}
-                        onChange={(e) => setDeliveryInfo(prev => ({ ...prev, notes: e.target.value }))}
-                        className="bg-white/10 border-purple-300/30 text-white placeholder:text-purple-300"
-                        placeholder="Instrucciones especiales, preferencias..."
-                        rows={2}
-                      />
-                    </div>
                   </CardContent>
                 </Card>
+
                 {/* Payment Method */}
                 <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20">
                   <CardHeader>
@@ -495,6 +686,7 @@ export default function CheckoutPage() {
               </>
             )}
           </div>
+
           {/* Right Column - Order Summary */}
           <div className="space-y-6">
             <Card className="backdrop-blur-sm bg-white/10 border-purple-500/20">
@@ -508,97 +700,86 @@ export default function CheckoutPage() {
                 {items.map((item) => (
                   <div key={item.id} className="flex items-center space-x-3 p-3 rounded-lg bg-white/5">
                     <div className="flex-1">
-                      <h4 className="text-white font-medium">{item.name}</h4>
-                      <p className="text-purple-300 text-sm">${Number(item.price).toFixed(2)} c/u</p>
+                      <h4 className="font-medium text-white">{item.name}</h4>
+                      <p className="text-sm text-purple-300">${Number(item.price).toFixed(2)} c/u</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Button
-                        size="sm"
+                        type="button"
                         variant="outline"
+                        size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="h-8 w-8 p-0 border-purple-400 text-purple-300 hover:bg-purple-600"
+                        className="h-8 w-8 p-0 border-purple-500/50 hover:bg-purple-500/20"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="text-white font-medium w-8 text-center">
-                        {item.quantity}
-                      </span>
+                      <span className="text-white font-medium w-8 text-center">{item.quantity}</span>
                       <Button
-                        size="sm"
+                        type="button"
                         variant="outline"
+                        size="sm"
                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="h-8 w-8 p-0 border-purple-400 text-purple-300 hover:bg-purple-600"
+                        className="h-8 w-8 p-0 border-purple-500/50 hover:bg-purple-500/20"
                       >
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => removeItem(item.id)}
-                        className="h-8 w-8 p-0 border-red-400 text-red-300 hover:bg-red-600"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
                     </div>
-                    <div className="text-white font-medium">
-                      ${(Number(item.price) * item.quantity).toFixed(2)}
+                    <div className="text-right">
+                      <p className="text-white font-medium">${(Number(item.price) * item.quantity).toFixed(2)}</p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
-                <Separator className="bg-purple-500/20" />
+
+                <Separator className="bg-purple-500/30" />
+
                 <div className="space-y-2">
-                  <div className="flex justify-between text-purple-200">
-                    <span>Subtotal:</span>
+                  <div className="flex justify-between text-purple-300">
+                    <span>Subtotal</span>
                     <span>${total.toFixed(2)}</span>
                   </div>
-                  {/* Mesero: no delivery fee, no payment at order */}
-                  {!shouldUseMeseroCheckout(user) && (
-                    <>
-                      <div className="flex justify-between text-purple-200">
-                        <span>Costo de envío:</span>
-                        <span>${calculateDeliveryFee().toFixed(2)}</span>
-                      </div>
-                      <Separator className="bg-purple-500/20" />
-                    </>
+                  {orderType === 'delivery' && (
+                    <div className="flex justify-between text-purple-300">
+                      <span>Delivery</span>
+                      <span>$25.00</span>
+                    </div>
                   )}
-                  <div className="flex justify-between text-white text-lg font-bold">
-                    <span>Total:</span>
-                    <span>${finalTotal.toFixed(2)}</span>
+                  <div className="flex justify-between text-white font-bold text-lg">
+                    <span>Total</span>
+                    <span>${deliveryTotal.toFixed(2)}</span>
                   </div>
                 </div>
+
                 <Button
-                  onClick={handleSubmit}
-                  disabled={isProcessing || itemCount === 0}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
-                  size="lg"
+                  type="submit"
+                  disabled={isProcessing}
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
                 >
                   {isProcessing ? (
                     <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Procesando pedido...
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Procesando...
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="h-5 w-5 mr-2" />
                       Confirmar Pedido
+                      <Clock className="ml-2 h-4 w-4" />
                     </>
                   )}
                 </Button>
-                <div className="text-center text-purple-300 text-sm">
-                  <Clock className="h-4 w-4 inline mr-1" />
-                  {!shouldUseMeseroCheckout(user) ? (
-                    <>Tiempo estimado: {deliveryInfo.type === 'delivery' ? '30-45' : '15-20'} minutos</>
-                  ) : (
-                    <>Orden de mesa abierta</>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   )
 }
-
-

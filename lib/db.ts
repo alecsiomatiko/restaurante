@@ -7,14 +7,15 @@ import {
   getUserByEmail,
   saveOrder,
   getUserOrders,
+  getOrder,
   getAllOrders,
   updateOrderStatus,
 } from "./mysql-db"
 
 // Función para registrar usuario (compatible con la interfaz anterior)
-export async function registerUser(email: string, passwordPlain: string) {
+export async function registerUser(email: string, passwordPlain: string, username?: string) {
   try {
-    const result = await createUser(email, passwordPlain)
+    const result = await createUser(email, passwordPlain, username)
     
     if (!result.success) {
       return { success: false, message: result.message }
@@ -34,7 +35,18 @@ export async function registerUser(email: string, passwordPlain: string) {
 }
 
 // Re-exportar funciones de MySQL para compatibilidad
-export { executeQuery, createUser, authenticateUser, getUserById, getUserByEmail, saveOrder, getUserOrders, getAllOrders, updateOrderStatus }
+export { 
+  executeQuery, 
+  createUser, 
+  authenticateUser, 
+  getUserById, 
+  getUserByEmail, 
+  saveOrder, 
+  getUserOrders, 
+  getOrder,
+  getAllOrders, 
+  updateOrderStatus 
+}
 
 // Verificar usuario por email o username (compatibilidad legacy)
 export async function verifyUser(identifier: string, password: string) {
