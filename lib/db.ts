@@ -10,6 +10,7 @@ import {
   getOrder,
   getAllOrders,
   updateOrderStatus,
+  changePassword,
 } from "./mysql-db"
 
 // Función para registrar usuario (compatible con la interfaz anterior)
@@ -45,7 +46,8 @@ export {
   getUserOrders, 
   getOrder,
   getAllOrders, 
-  updateOrderStatus 
+  updateOrderStatus,
+  changePassword
 }
 
 // Verificar usuario por email o username (compatibilidad legacy)

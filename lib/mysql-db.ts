@@ -265,3 +265,36 @@ export async function updateOrderStatus(orderId: number, status: string) {
     return { success: false, message: 'Error al actualizar estado del pedido' }
   }
 }
+
+// Cambiar contraseña de usuario
+export async function changePassword(userId: number, currentPassword: string, newPassword: string) {
+  try {
+    // Obtener usuario actual
+    const query = `SELECT password FROM users WHERE id = ?`
+    const users = await executeQuery(query, [userId]) as any[]
+    
+    if (users.length === 0) {
+      return { success: false, message: 'Usuario no encontrado' }
+    }
+    
+    const user = users[0]
+    
+    // Verificar contraseña actual
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password)
+    if (!isValidPassword) {
+      return { success: false, message: 'Contraseña actual incorrecta' }
+    }
+    
+    // Encriptar nueva contraseña
+    const hashedPassword = await bcrypt.hash(newPassword, 12)
+    
+    // Actualizar contraseña
+    const updateQuery = `UPDATE users SET password = ? WHERE id = ?`
+    await executeQuery(updateQuery, [hashedPassword, userId])
+    
+    return { success: true, message: 'Contraseña actualizada correctamente' }
+  } catch (error) {
+    console.error('Error changing password:', error)
+    return { success: false, message: 'Error al cambiar la contraseña' }
+  }
+}
