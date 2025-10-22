@@ -45,24 +45,23 @@ export default function LoginPage() {
       if (result.success) {
         toast.success('¡Bienvenido!', 'Has iniciado sesión correctamente')
         
-        // Verificar si hay un redirect pendiente
-        const urlParams = new URLSearchParams(window.location.search)
-        const redirectTo = urlParams.get('redirect')
-        
-        if (redirectTo) {
-          // Si hay un redirect específico, ir ahí
-          router.push(redirectTo)
-        } else {
-          // Redirigir según tipo de usuario del login response
-          const userData = (result as any).user
-          if (userData?.is_admin) {
-            router.push('/admin/dashboard')
-          } else if (userData?.is_driver) {
-            router.push('/driver/dashboard')
-          } else {
-            router.push('/')
+        // Redirigir según tipo de usuario
+        const response = await fetch('/api/users/profile', { credentials: 'include' })
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.user) {
+            // Si es driver (y NO admin), solo puede acceder al dashboard de driver
+            if (data.user.is_driver && !data.user.is_admin) {
+              router.push('/driver/dashboard')
+            } else {
+              // Admin o usuario normal van al inicio
+              router.push('/')
+            }
+            return
           }
         }
+        // Fallback
+        router.push('/')
       } else {
         setError(result.message || 'Error al iniciar sesión')
       }

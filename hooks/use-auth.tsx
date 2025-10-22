@@ -36,62 +36,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      // PRODUCTION: Priorizar múltiples fuentes de autenticación
-      const token = localStorage.getItem('auth-token')
-      const userData = localStorage.getItem('user-data')
-      
-      // ESTRATEGIA 1: localStorage + validación API
-      if (token && userData) {
-        try {
-          const user = JSON.parse(userData)
-          
-          // Validar token con API
-          const response = await fetch('/api/users/profile', {
-            credentials: 'include',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          })
-          
-          if (response.ok) {
-            const data = await response.json()
-            if (data.success) {
-              setUser(data.user)
-              console.log('✅ Usuario autenticado desde localStorage + API')
-              return
-            }
-          }
-        } catch (e) {
-          console.log('⚠️ Error validando localStorage, limpiando...')
-          localStorage.removeItem('auth-token')
-          localStorage.removeItem('refresh-token')
-          localStorage.removeItem('user-data')
-        }
-      }
-      
-      // ESTRATEGIA 2: Solo cookies
       const response = await fetch('/api/users/profile', {
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        credentials: 'include'
       })
-      
+
       if (response.ok) {
         const data = await response.json()
         if (data.success) {
           setUser(data.user)
-          // Sincronizar con localStorage
-          if (token) {
-            localStorage.setItem('user-data', JSON.stringify(data.user))
-          }
-          console.log('✅ Usuario autenticado desde cookies')
-          return
         }
       }
-      
-      console.log('ℹ️ No hay sesión activa')
     } catch (error) {
       console.error('Error verificando autenticación:', error)
     } finally {
@@ -114,18 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (data.success) {
         setUser(data.user)
-        
-        // CRITICAL: Asegurar que localStorage se guarde SIEMPRE
-        if (data.accessToken) {
-          localStorage.setItem('auth-token', data.accessToken)
-          localStorage.setItem('refresh-token', data.refreshToken)
-          localStorage.setItem('user-data', JSON.stringify(data.user))
-          console.log('💾 Tokens guardados en localStorage')
-          console.log('🔑 Token preview:', data.accessToken.substring(0, 50) + '...')
-        }
-        
-        console.log('✅ Login exitoso - Usuario autenticado')
-        return { success: true, user: data.user }
+        return { success: true }
       } else {
         return { success: false, message: data.error || 'Error de inicio de sesión' }
       }

@@ -19,6 +19,14 @@ export interface ProductImage {
   display_order: number
 }
 
+export interface Category {
+  id: number
+  name: string
+  slug: string
+  description: string | null
+  products?: Product[]
+}
+
 export interface Product {
   id: number
   name: string
@@ -188,5 +196,79 @@ export async function getProductById(id: number): Promise<Product | null> {
   } catch (error) {
     console.error('Error fetching product by id:', error)
     return null
+  }
+}
+
+export async function getCategoriesWithProducts(): Promise<Category[]> {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        c.id,
+        c.name,
+        c.slug,
+        c.description
+      FROM categories c
+      WHERE c.active = 1
+      ORDER BY c.name
+    `) as any[]
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug || row.name.toLowerCase().replace(/\s+/g, '-'),
+      description: row.description,
+      products: []
+    }))
+  } catch (error) {
+    console.error('Error fetching categories:', error)
+    return []
+  }
+}
+
+export async function getProductsByCategoryWithImages(categoryId: number): Promise<Product[]> {
+  try {
+    const [rows] = await db.execute(`
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.price,
+        p.image_url,
+        p.category_id,
+        p.available,
+        p.stock,
+        p.created_at,
+        p.updated_at,
+        c.name as category_name
+      FROM products p
+      LEFT JOIN categories c ON p.category_id = c.id
+      WHERE p.category_id = ? AND p.available = 1
+      ORDER BY p.name
+    `, [categoryId]) as any[]
+
+    return rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      price: parseFloat(row.price),
+      image_url: row.image_url,
+      category_id: row.category_id,
+      available: Boolean(row.available),
+      featured: false,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      slug: row.name.toLowerCase().replace(/\s+/g, '-'),
+      active: Boolean(row.available),
+      stock: row.stock,
+      category: row.category_name ? {
+        id: row.category_id,
+        name: row.category_name,
+        slug: row.category_name.toLowerCase().replace(/\s+/g, '-')
+      } : undefined,
+      images: []
+    }))
+  } catch (error) {
+    console.error('Error fetching products by category:', error)
+    return []
   }
 }

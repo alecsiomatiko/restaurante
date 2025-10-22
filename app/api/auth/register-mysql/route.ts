@@ -1,39 +1,57 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { registerUser } from "@/lib/db"
+import { NextRequest, NextResponse } from 'next/server'
+import { createUser } from '@/lib/mysql-db'
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, username } = await request.json()
+    const body = await request.json()
+    const { name, email, password } = body
 
-    if (!email || !password || !username) {
+    console.log('📝 Intentando registrar usuario:', email)
+
+    if (!email || !password) {
       return NextResponse.json(
-        { error: "Email, contraseña y nombre de usuario son requeridos" },
+        { success: false, error: 'Email y contraseña son requeridos' },
         { status: 400 }
       )
     }
 
-    // Registrar usuario
-    const result = await registerUser(email, password, username)
+    if (password.length < 6) {
+      return NextResponse.json(
+        { success: false, error: 'La contraseña debe tener al menos 6 caracteres' },
+        { status: 400 }
+      )
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { success: false, error: 'Email inválido' },
+        { status: 400 }
+      )
+    }
+
+    // Crear usuario
+    const result = await createUser(email, password, name)
 
     if (!result.success) {
+      console.log('❌ Registro fallido:', result.message)
       return NextResponse.json(
-        { error: result.message },
+        { success: false, error: result.message },
         { status: 400 }
       )
     }
+
+    console.log('✅ Usuario registrado exitosamente:', email)
 
     return NextResponse.json({
       success: true,
-      message: "Usuario registrado exitosamente",
-      userId: result.userId,
-      username: result.username
+      message: 'Usuario registrado exitosamente'
     })
-
-  } catch (error: any) {
-    console.error("Error en registro:", error)
+  } catch (error) {
+    console.error('❌ Error en registro:', error)
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { success: false, error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

@@ -6,21 +6,30 @@ import { verifyAccessToken, getSessionByToken } from "@/lib/auth-mysql"
 // GET - Obtener perfil del usuario
 export async function GET(request: NextRequest) {
   try {
-    // Buscar token en cookies o header Authorization
-    let authToken = request.cookies.get('auth-token')?.value
-    
+    const authToken = request.cookies.get('auth-token')?.value
     if (!authToken) {
-      const authHeader = request.headers.get('Authorization')
-      authToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : undefined
-    }
-    
-    if (!authToken) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "No autorizado" }, { status: 401 })
     }
 
-    const user = verifyAccessToken(authToken) || await getSessionByToken(authToken)
+    // Intentar verificar el token
+    let user = null
+    try {
+      user = verifyAccessToken(authToken)
+    } catch (error) {
+      console.log('⚠️ Token inválido o expirado, intentando buscar sesión...')
+    }
+
+    // Si el token falló, intentar buscar por sesión
     if (!user) {
-      return NextResponse.json({ error: "Sesión inválida" }, { status: 401 })
+      try {
+        user = await getSessionByToken(authToken)
+      } catch (error) {
+        console.log('⚠️ Sesión no encontrada')
+      }
+    }
+
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Sesión inválida o expirada" }, { status: 401 })
     }
 
     // Obtener información completa del usuario

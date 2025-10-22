@@ -13,11 +13,12 @@ interface Product {
   id: number
   name: string
   description: string | null
-  price: string
-  available: boolean
-  category_id: number
+  price: number
   image_url: string | null
-  stock?: number
+  category_id: number | null
+  available: boolean
+  stock: number
+  slug: string
   images?: Array<{
     id: number
     image_url: string
@@ -30,11 +31,11 @@ interface Product {
 interface Category {
   id: number
   name: string
+  slug: string
   description: string | null
-  image_url?: string
-  subtitle?: string
+  image_url?: string | null
+  subtitle?: string | null
   product_count?: number
-  products?: Product[]
 }
 
 export default function CategoryPage() {
@@ -55,8 +56,8 @@ export default function CategoryPage() {
       setLoading(true)
 
       // ✅ Obtener categoría dinámicamente desde API
-      const categoriesResponse = await fetch('/api/categories')
-      const categories = await categoriesResponse.json()
+      const categoriesRes = await fetch('/api/categories/with-products')
+      const categories = await categoriesRes.json()
       const foundCategory = categories.find((cat: Category) => cat.id === Number.parseInt(categoryId))
 
       if (!foundCategory) {
@@ -67,8 +68,8 @@ export default function CategoryPage() {
       setCategory(foundCategory)
 
       // ✅ Obtener productos con imágenes dinámicamente desde API
-      const productsResponse = await fetch(`/api/products-mysql?category=${categoryId}`)
-      const productsData = await productsResponse.json()
+      const productsRes = await fetch(`/api/products/by-category?categoryId=${categoryId}`)
+      const productsData = await productsRes.json()
       setProducts(productsData)
 
       console.log(`Categoría: ${foundCategory.name}, Productos encontrados: ${productsData.length}`)
@@ -167,7 +168,7 @@ export default function CategoryPage() {
                 <div className="p-6">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="text-xl font-bold text-gray-900">{product.name}</h3>
-                    <span className="text-2xl font-bold text-amber-600">${parseFloat(product.price).toFixed(2)}</span>
+                    <span className="text-2xl font-bold text-amber-600">${product.price.toFixed(2)}</span>
                   </div>
 
                   {product.description && <p className="text-gray-700 mb-4">{product.description}</p>}
@@ -179,7 +180,7 @@ export default function CategoryPage() {
                   <AddToCartButton
                     menuItem={{
                       title: product.name,
-                      price: parseFloat(product.price),
+                      price: product.price,
                     }}
                   />
                 </div>

@@ -1,32 +1,25 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { deleteSession } from "@/lib/auth-mysql"
+import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const authToken = request.cookies.get('auth-token')?.value
+    console.log('🚪 Cerrando sesión...')
 
-    if (authToken) {
-      // Eliminar sesión de la base de datos
-      await deleteSession(authToken)
-    }
-
-    // Crear respuesta y eliminar cookies
+    // Crear respuesta
     const response = NextResponse.json({
       success: true,
-      message: "Sesión cerrada exitosamente"
+      message: 'Sesión cerrada exitosamente'
     })
 
-    // Eliminar cookies
+    // Eliminar cookie del token
     response.cookies.delete('auth-token')
-    response.cookies.delete('refresh-token')
+    
+    console.log('✅ Sesión cerrada')
 
     return response
-
-  } catch (error: any) {
-    console.error("Error en logout:", error)
+  } catch (error) {
+    console.error('❌ Error en logout:', error)
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { success: false, error: 'Error al cerrar sesión' },
       { status: 500 }
     )
   }
