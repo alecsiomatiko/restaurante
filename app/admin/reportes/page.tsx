@@ -176,16 +176,21 @@ export default function ReportesPage() {
         url = `/api/admin/reports-by-date?startDate=${startDateStr}&endDate=${endDateStr}`
       }
       
+      console.log('📊 Cargando reportes desde:', url)
       const response = await fetch(url)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Reportes cargados:', data)
         setReportData(data)
       } else {
-        toast.error('Error', 'No se pudieron cargar los reportes')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('❌ Error en respuesta:', response.status, errorData)
+        toast.error('Error', errorData.message || 'No se pudieron cargar los reportes')
       }
     } catch (error) {
-      console.error('Error fetching reports:', error)
-      toast.error('Error', 'Error de conexión')
+      console.error('❌ Error fetching reports:', error)
+      toast.error('Error', `Error de conexión: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     } finally {
       setLoading(false)
     }

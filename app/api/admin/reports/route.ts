@@ -2,21 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import mysql from 'mysql2/promise'
 import { startOfDay, endOfDay } from 'date-fns'
 
-const connection = mysql.createConnection({
-  host: 'srv440.hstgr.io',
-  user: 'u191251575_manu',
-  password: 'Cerounocero.com20182417',
-  database: 'u191251575_manu',
-  port: 3306,
-  charset: 'utf8mb4'
+// Crear pool de conexiones en lugar de conexión individual
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || 'srv440.hstgr.io',
+  user: process.env.DB_USER || 'u191251575_manu',
+  password: process.env.DB_PASSWORD || 'Cerounocero.com20182417',
+  database: process.env.DB_NAME || 'u191251575_manu',
+  port: parseInt(process.env.DB_PORT || '3306'),
+  charset: 'utf8mb4',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
 })
 
 export async function GET(request: NextRequest) {
+  let conn
   try {
     const { searchParams } = new URL(request.url)
     const period = parseInt(searchParams.get('period') || '7')
     
-    const conn = await connection
+    // Obtener conexión del pool
+    conn = await pool.getConnection()
     
     // Calcular fecha de inicio
     const startDate = new Date()
@@ -367,8 +373,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error generating reports:', error)
     return NextResponse.json(
-      { error: 'Error al generar reportes' },
+      { 
+        error: 'Error al generar reportes',
+        message: error instanceof Error ? error.message : 'Error desconocido'
+      },
       { status: 500 }
     )
+  } finally {
+    // Siempre liberar la conexión de vuelta al pool
+    if (conn) {
+      conn.release()
+    }
   }
 }

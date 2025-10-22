@@ -3,6 +3,7 @@ import { getPool } from '@/lib/mysql-db'
 import { format, startOfDay, endOfDay } from 'date-fns'
 
 export async function GET(request: NextRequest) {
+  let conn
   try {
     const { searchParams } = new URL(request.url)
     const startDateParam = searchParams.get('startDate')
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     const endDate = endOfDay(new Date(endDateParam))
     
     const pool = getPool()
-    const conn = await pool.getConnection()
+    conn = await pool.getConnection()
 
     // Total de ventas y pedidos - SIN FILTROS RESTRICTIVOS
     const [salesResult] = await conn.execute(
@@ -111,8 +112,6 @@ export async function GET(request: NextRequest) {
       ORDER BY sales DESC
     `, [startDate.toISOString().slice(0, 19).replace('T', ' '), endDate.toISOString().slice(0, 19).replace('T', ' ')])
 
-    await conn.release()
-
     const totalOrders = salesResult[0]?.total_orders || 0
     const totalSales = salesResult[0]?.total_sales || 0
     const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0
@@ -137,8 +136,15 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error generating reports by date:', error)
     return NextResponse.json(
-      { error: 'Error al generar reportes por fecha' },
+      { 
+        error: 'Error al generar reportes por fecha',
+        message: error instanceof Error ? error.message : 'Error desconocido'
+      },
       { status: 500 }
     )
+  } finally {
+    if (conn) {
+      conn.release()
+    }
   }
 }
