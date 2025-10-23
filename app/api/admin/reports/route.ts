@@ -4,11 +4,11 @@ import { startOfDay, endOfDay } from 'date-fns'
 
 // Crear pool de conexiones en lugar de conexión individual
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'srv440.hstgr.io',
-  user: process.env.DB_USER || 'u191251575_manu',
-  password: process.env.DB_PASSWORD || 'Cerounocero.com20182417',
-  database: process.env.DB_NAME || 'u191251575_manu',
-  port: parseInt(process.env.DB_PORT || '3306'),
+  host: process.env.MYSQL_HOST || process.env.DB_HOST || 'srv440.hstgr.io',
+  user: process.env.MYSQL_USER || process.env.DB_USER || 'u191251575_manu',
+  password: process.env.MYSQL_PASSWORD || process.env.DB_PASSWORD || 'Cerounocero.com20182417',
+  database: process.env.MYSQL_DATABASE || process.env.DB_NAME || 'u191251575_manu',
+  port: parseInt(process.env.MYSQL_PORT || process.env.DB_PORT || '3306'),
   charset: 'utf8mb4',
   waitForConnections: true,
   connectionLimit: 10,
