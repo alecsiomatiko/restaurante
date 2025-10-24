@@ -74,7 +74,12 @@ export async function middleware(req: NextRequest) {
     } else {
       // Obtener token de las cookies
       const authToken = req.cookies.get('auth-token')?.value;
+      const allCookies = Array.from(req.cookies.getAll()).map(c => c.name).join(', ');
+      console.log('🍪 Todas las cookies:', allCookies || 'ninguna');
       console.log('🎫 Token encontrado:', authToken ? 'SÍ' : 'NO');
+      if (authToken) {
+        console.log('🔑 Token preview:', authToken.substring(0, 20) + '...');
+      }
 
       if (!authToken) {
         console.log('❌ Sin token, redirigiendo a login');

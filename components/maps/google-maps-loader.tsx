@@ -3,14 +3,6 @@
 import { useState, useEffect, createContext, useContext, type ReactNode } from "react"
 import { AlertCircle, RefreshCw } from "lucide-react"
 
-// Definir el namespace de Google para evitar errores de TypeScript
-declare global {
-  interface Window {
-    google?: any
-    initGoogleMaps?: () => void
-  }
-}
-
 // Contexto para Google Maps
 type GoogleMapsContextType = {
   isLoaded: boolean

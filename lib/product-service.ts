@@ -72,7 +72,7 @@ export async function getFeaturedProductsWithImages(): Promise<Product[]> {
       LIMIT 6
     `) as any[]
 
-    return rows.map(row => ({
+    return rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       description: row.description,
@@ -120,7 +120,7 @@ export async function getAllProducts(): Promise<Product[]> {
       ORDER BY p.name
     `) as any[]
 
-    return rows.map(row => ({
+    return rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       description: row.description,
@@ -212,7 +212,7 @@ export async function getCategoriesWithProducts(): Promise<Category[]> {
       ORDER BY c.name
     `) as any[]
 
-    return rows.map(row => ({
+    return rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       slug: row.slug || row.name.toLowerCase().replace(/\s+/g, '-'),
@@ -246,7 +246,7 @@ export async function getProductsByCategoryWithImages(categoryId: number): Promi
       ORDER BY p.name
     `, [categoryId]) as any[]
 
-    return rows.map(row => ({
+    return rows.map((row: any) => ({
       id: row.id,
       name: row.name,
       description: row.description,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from './use-auth'
 import { useToast } from './use-notifications'
 
@@ -32,13 +32,16 @@ export function useProducts() {
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [lastFailedAt, setLastFailedAt] = useState<number | null>(null)
-  const [inFlightProducts, setInFlightProducts] = useState(false)
-  const [inFlightCategories, setInFlightCategories] = useState(false)
+  
+  // Usar refs para control interno
+  const inFlightProducts = useRef(false)
+  const inFlightCategories = useRef(false)
+  const lastErrorToast = useRef<number>(0)
+  
   const { user } = useAuth()
   const toast = useToast()
 
-  async function fetchWithRetry(url: string, attempts = 2) {
+  const fetchWithRetry = useCallback(async (url: string, attempts = 2) => {
     let attempt = 0
     while (true) {
       try {
@@ -52,23 +55,16 @@ export function useProducts() {
         await new Promise((res) => setTimeout(res, delay))
       }
     }
-  }
+  }, [])
 
-  const fetchProducts = async (categoryId?: number) => {
+  const fetchProducts = useCallback(async (categoryId?: number) => {
+    // prevent concurrent fetches
+    if (inFlightProducts.current) {
+      return
+    }
+
     try {
-      // avoid tight loops when recent failure
-      if (lastFailedAt && Date.now() - lastFailedAt < 30000) {
-        console.warn('Last fetch failed recently, backing off for 30s')
-        return
-      }
-
-      // prevent concurrent fetches
-      if (inFlightProducts) {
-        console.warn('Products fetch already in flight, skipping')
-        return
-      }
-
-      setInFlightProducts(true)
+      inFlightProducts.current = true
       setLoading(true)
       setError(null)
 
@@ -77,54 +73,66 @@ export function useProducts() {
 
       if (data.success) {
         setProducts(data.products)
-        setLastFailedAt(null) // reset on success
         setError(null)
       } else {
-        setError(data.error || 'Error cargando productos')
-        setLastFailedAt(Date.now())
+        const errorMsg = data.error || 'Error cargando productos'
+        setError(errorMsg)
+        const now = Date.now()
+        if (now - lastErrorToast.current > 5000) {
+          toast.error('Error de productos', errorMsg)
+          lastErrorToast.current = now
+        }
       }
     } catch (error: any) {
       console.error('Error fetching products:', error)
-      setError('Error de conexión')
-      setLastFailedAt(Date.now())
+      const errorMsg = 'Error de conexión'
+      setError(errorMsg)
+      const now = Date.now()
+      if (now - lastErrorToast.current > 5000) {
+        toast.error('Error de conexión', errorMsg)
+        lastErrorToast.current = now
+      }
     } finally {
       setLoading(false)
-      setInFlightProducts(false)
+      inFlightProducts.current = false
     }
-  }
+  }, [fetchWithRetry, toast])
 
   // Cargar categorías
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
+    if (inFlightCategories.current) {
+      return
+    }
+
     try {
-      if (lastFailedAt && Date.now() - lastFailedAt < 30000) {
-        console.warn('Last fetch failed recently, backing off categories for 30s')
-        return
-      }
-
-      if (inFlightCategories) {
-        console.warn('Categories fetch already in flight, skipping')
-        return
-      }
-
-      setInFlightCategories(true)
+      inFlightCategories.current = true
 
       const data = await fetchWithRetry('/api/categories', 2)
       if (data.success) {
         setCategories(data.categories)
-        setLastFailedAt(null)
         setError(null)
       } else {
-        setError(data.error || 'Error cargando categorías')
-        setLastFailedAt(Date.now())
+        const errorMsg = data.error || 'Error cargando categorías'
+        setError(errorMsg)
+        const now = Date.now()
+        if (now - lastErrorToast.current > 5000) {
+          toast.error('Error de categorías', errorMsg)
+          lastErrorToast.current = now
+        }
       }
     } catch (error) {
       console.error('Error fetching categories:', error)
-      setError('Error de conexión')
-      setLastFailedAt(Date.now())
+      const errorMsg = 'No se pudieron cargar las categorías'
+      setError(errorMsg)
+      const now = Date.now()
+      if (now - lastErrorToast.current > 5000) {
+        toast.error('Error de conexión', errorMsg)
+        lastErrorToast.current = now
+      }
     } finally {
-      setInFlightCategories(false)
+      inFlightCategories.current = false
     }
-  }
+  }, [fetchWithRetry, toast])
 
   // Crear producto (admin only)
   const createProduct = async (productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {

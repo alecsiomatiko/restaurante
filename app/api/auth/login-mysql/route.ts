@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     )
 
     console.log('✅ Login exitoso para:', email)
+    console.log('🍪 Configurando cookie con token...')
 
     // Crear respuesta con cookie
     const response = NextResponse.json({
@@ -68,6 +69,9 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7, // 7 días
       path: '/'
     })
+
+    console.log('✅ Cookie auth-token configurada')
+    console.log('🔑 Token preview:', token.substring(0, 20) + '...')
 
     return response
   } catch (error) {

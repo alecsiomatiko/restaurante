@@ -1,55 +1,153 @@
-"use client"
+"use client""use client""use client"
 
-import { useEffect, useRef, useState } from "react"
-import { useGoogleMaps } from "./google-maps-loader"
-import { realTimeLocationService, type Location } from "@/lib/real-time-location"
-import { MapPin, Navigation } from "lucide-react"
 
-// Declarar tipos para Google Maps
-declare global {
-  interface Window {
-    google: typeof google
-  }
-}
 
-interface RealTimeTrackingMapProps {
+import { useRef } from "react"
+
+import { MapPin } from "lucide-react"
+
+import { useEffect, useRef, useState } from "react"import { useEffect, useRef, useState } from "react"
+
+interface Location {
+
+  lat: number;import { MapPin, Navigation } from "lucide-react"import { useGoogleMaps } from "./google-maps-loader"
+
+  lng: number;
+
+}import { realTimeLocationService, type Location } from "@/lib/real-time-location"
+
+
+
+interface RealTimeTrackingMapProps {interface Location {import { MapPin, Navigation } from "lucide-react"
+
   driverId?: string
-  orderId?: number
+
+  orderId?: number  lat: number;
+
   restaurantLocation: Location
-  deliveryLocation: Location
+
+  deliveryLocation: Location  lng: number;// Declarar tipos para Google Maps usando any para evitar errores
+
   className?: string
-  showControls?: boolean
-  onMapLoaded?: () => void
+
+  onMapReady?: () => void}declare global {
+
+  showDriverLocation?: boolean
+
+  showRoute?: boolean  interface Window {
+
 }
+
+interface RealTimeTrackingMapProps {    google: any;
 
 export function RealTimeTrackingMap({
-  driverId,
+
+  driverId,  driverId?: string  }
+
   orderId,
-  restaurantLocation,
+
+  restaurantLocation,  orderId?: number}
+
   deliveryLocation,
-  className = "w-full h-64 md:h-96",
-  showControls = true,
-  onMapLoaded,
-}: RealTimeTrackingMapProps) {
+
+  className = "",  restaurantLocation: Location
+
+  onMapReady,
+
+  showDriverLocation = true,  deliveryLocation: Locationinterface RealTimeTrackingMapProps {
+
+  showRoute = true
+
+}: RealTimeTrackingMapProps) {  className?: string  driverId?: string
+
   const mapRef = useRef<HTMLDivElement>(null)
-  const { isLoaded, maps } = useGoogleMaps()
-  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
+
+  onMapReady?: () => void  orderId?: number
+
+  // Simplified placeholder component for now
+
+  return (  showDriverLocation?: boolean  restaurantLocation: Location
+
+    <div className={`relative w-full h-full bg-slate-100 rounded-lg ${className}`}>
+
+      <div ref={mapRef} className="w-full h-full rounded-lg">  showRoute?: boolean  deliveryLocation: Location
+
+        <div className="flex items-center justify-center h-full text-slate-500">
+
+          <div className="text-center">}  className?: string
+
+            <MapPin className="w-8 h-8 mx-auto mb-2" />
+
+            <p>Mapa de tracking en tiempo real</p>  showControls?: boolean
+
+            <p className="text-sm">Funcionalidad disponible próximamente</p>
+
+          </div>export function RealTimeTrackingMap({  onMapLoaded?: () => void
+
+        </div>
+
+      </div>  driverId,}
+
+    </div>
+
+  )  orderId,
+
+}
+  restaurantLocation,export function RealTimeTrackingMap({
+
+  deliveryLocation,  driverId,
+
+  className = "",  orderId,
+
+  onMapReady,  restaurantLocation,
+
+  showDriverLocation = true,  deliveryLocation,
+
+  showRoute = true  className = "w-full h-64 md:h-96",
+
+}: RealTimeTrackingMapProps) {  showControls = true,
+
+  const mapRef = useRef<HTMLDivElement>(null)  onMapLoaded,
+
+  }: RealTimeTrackingMapProps) {
+
+  const [mapInstance, setMapInstance] = useState<any | null>(null)  const mapRef = useRef<HTMLDivElement>(null)
+
+  const [driverLocation, setDriverLocation] = useState<Location | null>(null)  const { isLoaded, maps } = useGoogleMaps()
+
+  const [isTracking, setIsTracking] = useState(false)  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null)
+
   const [directionsRenderer, setDirectionsRenderer] = useState<google.maps.DirectionsRenderer | null>(null)
-  const [driverMarker, setDriverMarker] = useState<google.maps.Marker | null>(null)
-  const [driverLocation, setDriverLocation] = useState<Location | null>(null)
-  const [isFollowingDriver, setIsFollowingDriver] = useState(true)
-  const [estimatedTime, setEstimatedTime] = useState<string | null>(null)
-  const [estimatedDistance, setEstimatedDistance] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  // Inicializar mapa cuando Google Maps se carga
-  useEffect(() => {
-    if (!isLoaded || !maps || !mapRef.current) return
+  // Simplified placeholder component for now  const [driverMarker, setDriverMarker] = useState<google.maps.Marker | null>(null)
 
-    try {
-      // Crear instancia del mapa
-      const mapOptions: google.maps.MapOptions = {
-        center: restaurantLocation,
+  return (  const [driverLocation, setDriverLocation] = useState<Location | null>(null)
+
+    <div className={`relative w-full h-full bg-slate-100 rounded-lg ${className}`}>  const [isFollowingDriver, setIsFollowingDriver] = useState(true)
+
+      <div ref={mapRef} className="w-full h-full rounded-lg">  const [estimatedTime, setEstimatedTime] = useState<string | null>(null)
+
+        <div className="flex items-center justify-center h-full text-slate-500">  const [estimatedDistance, setEstimatedDistance] = useState<string | null>(null)
+
+          <div className="text-center">  const [error, setError] = useState<string | null>(null)
+
+            <MapPin className="w-8 h-8 mx-auto mb-2" />
+
+            <p>Mapa de tracking en tiempo real</p>  // Inicializar mapa cuando Google Maps se carga
+
+            <p className="text-sm">Funcionalidad disponible próximamente</p>  useEffect(() => {
+
+          </div>    if (!isLoaded || !maps || !mapRef.current) return
+
+        </div>
+
+      </div>    try {
+
+    </div>      // Crear instancia del mapa
+
+  )      const mapOptions: google.maps.MapOptions = {
+
+}        center: restaurantLocation,
         zoom: 15,
         mapTypeControl: false,
         fullscreenControl: showControls,

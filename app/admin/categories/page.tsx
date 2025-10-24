@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import AdminLayout from "@/components/admin/admin-layout"
 import { Plus, Edit, Trash2, Save, X, Tag, Search, Grid } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -25,8 +25,8 @@ interface Category {
 }
 
 export default function AdminCategoriesPage() {
-  const { categories, loading, fetchCategories } = useProducts()
   const toast = useToast()
+  const hasFetchedRef = useRef(false)
   
   // Estado local
   const [searchTerm, setSearchTerm] = useState("")
@@ -43,15 +43,12 @@ export default function AdminCategoriesPage() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [categoriesWithCount, setCategoriesWithCount] = useState<Category[]>([])
-
-  useEffect(() => {
-    fetchCategories()
-    fetchCategoriesWithProductCount()
-  }, [fetchCategories])
+  const [loading, setLoading] = useState(false)
 
   // Obtener categorías con conteo de productos
   const fetchCategoriesWithProductCount = async () => {
     try {
+      setLoading(true)
       const response = await fetch('/api/admin/categories', {
         credentials: 'include'
       })
@@ -61,12 +58,26 @@ export default function AdminCategoriesPage() {
       }
       
       const data = await response.json()
-      setCategoriesWithCount(data.categories || [])
+      
+      if (data.success && Array.isArray(data.categories)) {
+        setCategoriesWithCount(data.categories)
+      } else {
+        throw new Error('Formato de respuesta inválido')
+      }
     } catch (error) {
       console.error('Error fetching categories with count:', error)
       toast.error("Error", "No se pudieron cargar las categorías")
+    } finally {
+      setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!hasFetchedRef.current) {
+      hasFetchedRef.current = true
+      fetchCategoriesWithProductCount()
+    }
+  }, [])
 
   // Filtrar categorías
   const filteredCategories = categoriesWithCount.filter(category =>
@@ -108,7 +119,8 @@ export default function AdminCategoriesPage() {
       toast.success("Categoría creada", "La categoría se ha creado exitosamente")
       setIsAddDialogOpen(false)
       setNewCategory({ name: "", description: "" })
-      await fetchCategoriesWithProductCount()
+      // Refresh después de un pequeño delay para evitar race conditions
+      setTimeout(() => fetchCategoriesWithProductCount(), 100)
     } catch (error: any) {
       console.error('Error creating category:', error)
       toast.error("Error", error.message || "No se pudo crear la categoría")
@@ -146,7 +158,8 @@ export default function AdminCategoriesPage() {
       toast.success("Categoría actualizada", "Los cambios se han guardado exitosamente")
       setIsEditDialogOpen(false)
       setEditingCategory(null)
-      await fetchCategoriesWithProductCount()
+      // Refresh después de un pequeño delay para evitar race conditions
+      setTimeout(() => fetchCategoriesWithProductCount(), 100)
     } catch (error: any) {
       console.error('Error updating category:', error)
       toast.error("Error", error.message || "No se pudo actualizar la categoría")
@@ -179,7 +192,8 @@ export default function AdminCategoriesPage() {
       }
 
       toast.success("Categoría eliminada", "La categoría se ha eliminado exitosamente")
-      await fetchCategoriesWithProductCount()
+      // Refresh después de un pequeño delay para evitar race conditions
+      setTimeout(() => fetchCategoriesWithProductCount(), 100)
     } catch (error: any) {
       console.error('Error deleting category:', error)
       toast.error("Error", error.message || "No se pudo eliminar la categoría")

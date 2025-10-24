@@ -52,6 +52,19 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [notifications])
 
   const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+    // Evitar duplicados del mismo título y tipo en los últimos 5 segundos
+    const now = new Date()
+    const recentDuplicate = notifications.find(n => 
+      n.title === notification.title && 
+      n.type === notification.type &&
+      (now.getTime() - n.timestamp.getTime()) < 5000
+    )
+
+    if (recentDuplicate) {
+      console.log('Evitando notificación duplicada:', notification.title)
+      return
+    }
+
     const newNotification: Notification = {
       ...notification,
       id: crypto.randomUUID(),
@@ -66,6 +79,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       setTimeout(() => {
         removeNotification(newNotification.id)
       }, 5000)
+    }
+    
+    // Auto-remove error notifications after 10 seconds
+    if (notification.type === 'error') {
+      setTimeout(() => {
+        removeNotification(newNotification.id)
+      }, 10000)
     }
   }
 

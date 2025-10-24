@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 import Image from "next/image"
@@ -45,13 +45,7 @@ export default function CategoryPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    if (categoryId) {
-      fetchCategoryAndProducts()
-    }
-  }, [categoryId])
-
-  async function fetchCategoryAndProducts() {
+  const fetchCategoryAndProducts = useCallback(async () => {
     try {
       setLoading(true)
 
@@ -79,7 +73,13 @@ export default function CategoryPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [categoryId])
+
+  useEffect(() => {
+    if (categoryId) {
+      fetchCategoryAndProducts()
+    }
+  }, [categoryId, fetchCategoryAndProducts])
 
   if (loading) {
     return (

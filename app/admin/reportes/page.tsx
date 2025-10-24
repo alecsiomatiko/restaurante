@@ -228,8 +228,8 @@ export default function ReportesPage() {
       reportData.dailySales.forEach(day => {
         dailyData.push([
           day.date,
-          day.orders,
-          day.total_sales
+          day.orders.toString(),
+          day.total_sales.toString()
         ])
       })
       const ws2 = XLSX.utils.aoa_to_sheet(dailyData)
@@ -242,9 +242,9 @@ export default function ReportesPage() {
       reportData.salesByTable.forEach(table => {
         tableData.push([
           table.table_name,
-          table.orders_count,
-          table.table_sales,
-          table.avg_ticket
+          table.orders_count.toString(),
+          table.table_sales.toString(),
+          table.avg_ticket.toString()
         ])
       })
       const ws3 = XLSX.utils.aoa_to_sheet(tableData)
@@ -257,9 +257,9 @@ export default function ReportesPage() {
       reportData.salesByWaiter.forEach(waiter => {
         waiterData.push([
           waiter.waiter_name,
-          waiter.orders_served,
-          waiter.waiter_sales,
-          waiter.avg_ticket
+          waiter.orders_served.toString(),
+          waiter.waiter_sales.toString(),
+          waiter.avg_ticket.toString()
         ])
       })
       const ws4 = XLSX.utils.aoa_to_sheet(waiterData)
@@ -272,11 +272,11 @@ export default function ReportesPage() {
       reportData.topProducts.forEach(product => {
         productsData.push([
           product.name,
-          product.quantity,
-          product.sales,
-          product.cost || 0,
-          product.profit || 0,
-          product.profitMargin || 0
+          product.quantity.toString(),
+          product.sales.toString(),
+          (product.cost || 0).toString(),
+          (product.profit || 0).toString(),
+          (product.profitMargin || 0).toString()
         ])
       })
       const ws5 = XLSX.utils.aoa_to_sheet(productsData)
@@ -440,7 +440,7 @@ export default function ReportesPage() {
                 <div className="bg-slate-800 border border-slate-700 rounded-lg p-2">
                   <DatePicker
                     selected={startDate}
-                    onChange={(date: Date) => setStartDate(date)}
+                    onChange={(date: Date | null) => date && setStartDate(date)}
                     selectsStart
                     startDate={startDate}
                     endDate={endDate}
@@ -454,7 +454,7 @@ export default function ReportesPage() {
                 <div className="bg-slate-800 border border-slate-700 rounded-lg p-2">
                   <DatePicker
                     selected={endDate}
-                    onChange={(date: Date) => setEndDate(date)}
+                    onChange={(date: Date | null) => date && setEndDate(date)}
                     selectsEnd
                     startDate={startDate}
                     endDate={endDate}

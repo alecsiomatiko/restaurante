@@ -33,14 +33,6 @@ import { useCart } from '@/hooks/use-cart'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-notifications'
 
-// Declarar Google como variable global
-declare global {
-  interface Window {
-    google?: any
-    initMap?: () => void
-  }
-}
-
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, updateQuantity, removeItem, total, itemCount, createOrder, clearCart } = useCart()

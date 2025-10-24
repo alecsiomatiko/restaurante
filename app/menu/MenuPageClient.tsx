@@ -32,7 +32,8 @@ export default function MenuPageClient() {
     if (typeof fetchCategories === 'function') {
       fetchCategories()
     }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Solo cargar una vez al montar
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = searchQuery === "" ||
