@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button"
 import { useCart } from "@/hooks/use-cart"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function FloatingCart() {
   const { items, total, updateQuantity, removeItem } = useCart()
   const [isOpen, setIsOpen] = useState(false)
   const router = useRouter()
+  const { user } = useAuth()
   
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -122,11 +124,13 @@ export default function FloatingCart() {
               <Button
                 onClick={() => {
                   setIsOpen(false)
-                  router.push('/checkout')
+                  // Redirigir a checkout de mesero si el usuario es mesero, sino checkout normal
+                  const checkoutPath = user?.is_waiter ? '/checkout/mesero' : '/checkout'
+                  router.push(checkoutPath)
                 }}
                 className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3"
               >
-                Ir al Checkout
+                {user?.is_waiter ? 'Registrar Pedido' : 'Ir al Checkout'}
               </Button>
             </div>
           </div>

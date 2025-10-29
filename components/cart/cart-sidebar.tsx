@@ -6,6 +6,7 @@ import { ShoppingCart, X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "l
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from "framer-motion"
+import { useAuth } from "@/hooks/use-auth"
 
 export default function CartSidebar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -13,6 +14,7 @@ export default function CartSidebar() {
   const cartRef = useRef<HTMLDivElement>(null)
   const { items, removeItem, updateQuantity, totalItems, totalPrice, clearCart } = useCart()
   const router = useRouter()
+  const { user } = useAuth()
 
   // Cerrar carrito al hacer click fuera
   useEffect(() => {
@@ -33,7 +35,9 @@ export default function CartSidebar() {
 
   const handleCheckout = () => {
     if (items.length === 0) return
-    router.push("/checkout")
+    // Redirigir a checkout de mesero si el usuario es mesero, sino checkout normal
+    const checkoutPath = user?.is_waiter ? '/checkout/mesero' : '/checkout'
+    router.push(checkoutPath)
     setIsOpen(false)
   }
 

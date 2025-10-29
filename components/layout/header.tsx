@@ -198,7 +198,7 @@ export default function Header() {
 
             {/* Cart - Solo si NO es driver puro */}
             {!isDriverOnly && (
-              <Link href="/checkout">
+              <Link href={user?.is_waiter ? "/checkout/mesero" : "/checkout"}>
                 <Button variant="ghost" size="sm" className="relative" data-cart-button>
                   <ShoppingCart className="h-4 w-4" />
                   {itemCount > 0 && (
