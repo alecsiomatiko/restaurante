@@ -308,6 +308,38 @@ export default function Header() {
                           </Link>
                         ))}
                       </>
+                    ) : user?.is_waiter ? (
+                      <>
+                        {/* MESERO - Botón destacado */}
+                        <div className="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-1 mb-2">
+                          <Link
+                            href="/mesero/mesas-abiertas"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="flex items-center justify-center space-x-2 bg-white rounded-md px-4 py-4 text-base font-bold transition-all hover:bg-yellow-50"
+                          >
+                            <span className="text-2xl">🍽️</span>
+                            <span className="text-yellow-700">COMEDOR</span>
+                          </Link>
+                        </div>
+                        
+                        {/* Otras opciones de mesero */}
+                        <div className="text-xs font-semibold text-yellow-600 px-2 mt-4">
+                          NAVEGACIÓN
+                        </div>
+                        {navigationItems.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={cn(
+                              "flex items-center space-x-2 rounded-md px-2 py-2 text-sm font-medium transition-colors hover:bg-accent",
+                              isActivePage(item.href) ? "bg-accent" : ""
+                            )}
+                          >
+                            <span>{item.label}</span>
+                          </Link>
+                        ))}
+                      </>
                     ) : (
                       <>
                         {navigationItems.map((item) => (
