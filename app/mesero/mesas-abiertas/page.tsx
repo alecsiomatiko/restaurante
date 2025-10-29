@@ -250,20 +250,30 @@ export default function MesasAbiertasPage() {
           <title>Ticket - ${table.tableName}</title>
           <meta charset="UTF-8">
           <style>
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            
             body { 
               font-family: 'Courier New', monospace; 
               width: 320px; 
               margin: 0 auto; 
               padding: 15px; 
               background: white;
-              color: black;
+              color: #000;
+              font-weight: 900;
+              -webkit-font-smoothing: antialiased;
+              text-rendering: optimizeLegibility;
             }
+            
             .header { 
               text-align: center; 
-              border-bottom: 2px dashed #000; 
+              border-bottom: 3px dashed #000; 
               padding-bottom: 15px; 
               margin-bottom: 15px; 
             }
+            
             .logo {
               width: 120px;
               height: 120px;
@@ -273,12 +283,13 @@ export default function MesasAbiertasPage() {
               display: flex;
               align-items: center;
               justify-content: center;
-              border: 2px solid #333;
+              border: 3px solid #000;
               overflow: hidden;
               position: relative;
               box-sizing: border-box;
               padding: 5px;
             }
+            
             .logo img {
               width: 100%;
               height: 100%;
@@ -287,13 +298,17 @@ export default function MesasAbiertasPage() {
               display: block;
               max-width: 100%;
               max-height: 100%;
+              filter: contrast(1.3) brightness(0.9);
             }
+            
             .logo img[src=""], .logo img:not([src]) {
               display: none;
             }
+            
             .logo .fallback {
-              font-size: 24px;
-              color: #333;
+              font-size: 28px;
+              color: #000;
+              font-weight: 900;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -301,67 +316,150 @@ export default function MesasAbiertasPage() {
               height: 100%;
               text-align: center;
             }
+            
             .business-name {
-              font-size: 18px;
-              font-weight: bold;
+              font-size: 20px;
+              font-weight: 900;
               margin: 10px 0 5px 0;
-              letter-spacing: 1px;
+              letter-spacing: 2px;
+              color: #000;
+              text-transform: uppercase;
             }
+            
             .business-info {
-              font-size: 11px;
-              margin: 2px 0;
-              color: #333;
+              font-size: 12px;
+              margin: 3px 0;
+              color: #000;
+              font-weight: 700;
             }
+            
             .table-info {
-              font-size: 14px;
-              font-weight: bold;
+              font-size: 16px;
+              font-weight: 900;
               margin: 10px 0;
-              padding: 5px;
-              background: #f5f5f5;
-              border: 1px solid #ddd;
+              padding: 8px;
+              background: #000;
+              color: #fff;
+              border: 2px solid #000;
             }
+            
+            .items {
+              margin: 15px 0;
+            }
+            
             .item { 
               display: flex; 
               justify-content: space-between; 
-              margin: 5px 0; 
-              padding: 2px 0;
-              border-bottom: 1px dotted #ccc;
+              margin: 8px 0; 
+              padding: 5px 0;
+              border-bottom: 2px solid #000;
+              font-weight: 900;
             }
+            
             .item:last-child {
-              border-bottom: none;
+              border-bottom: 2px solid #000;
             }
+            
             .item-name {
               flex: 1;
               margin-right: 10px;
+              font-size: 13px;
+              color: #000;
+              font-weight: 900;
             }
+            
             .item-price {
-              font-weight: bold;
-              min-width: 60px;
+              font-weight: 900;
+              min-width: 70px;
               text-align: right;
+              font-size: 14px;
+              color: #000;
             }
+            
             .total { 
-              border-top: 2px dashed #000; 
-              padding-top: 10px; 
+              border-top: 4px double #000; 
+              padding-top: 12px; 
               margin-top: 15px; 
-              font-weight: bold; 
-              font-size: 16px;
+              font-weight: 900; 
+              font-size: 20px;
+              background: #000;
+              color: #fff;
+              padding: 12px 8px;
             }
+            
+            .total .item {
+              border-bottom: none;
+              color: #fff;
+              margin: 0;
+            }
+            
+            .total .item-price {
+              color: #fff;
+              font-size: 20px;
+            }
+            
             .footer { 
               text-align: center; 
               margin-top: 20px; 
-              font-size: 12px;
-              border-top: 1px dashed #000;
+              font-size: 13px;
+              border-top: 3px dashed #000;
               padding-top: 15px;
+              font-weight: 700;
             }
+            
             .thank-you {
-              font-size: 14px;
-              font-weight: bold;
-              margin: 10px 0;
+              font-size: 16px;
+              font-weight: 900;
+              margin: 12px 0;
+              color: #000;
+              text-transform: uppercase;
             }
+            
             .social {
-              font-size: 10px;
-              margin: 5px 0;
-              color: #666;
+              font-size: 11px;
+              margin: 6px 0;
+              color: #000;
+              font-weight: 700;
+            }
+            
+            @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              
+              body {
+                font-weight: 900 !important;
+                color: #000 !important;
+              }
+              
+              .business-name,
+              .business-info,
+              .table-info,
+              .item,
+              .item-name,
+              .item-price,
+              .total,
+              .thank-you,
+              .social {
+                font-weight: 900 !important;
+                color: #000 !important;
+              }
+              
+              .table-info {
+                background: #000 !important;
+                color: #fff !important;
+              }
+              
+              .total {
+                background: #000 !important;
+                color: #fff !important;
+              }
+              
+              .total .item,
+              .total .item-price {
+                color: #fff !important;
+              }
             }
           </style>
         </head>
