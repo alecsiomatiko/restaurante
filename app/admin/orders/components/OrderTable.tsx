@@ -1,5 +1,6 @@
 import React from "react";
 import { ShoppingBag } from "lucide-react";
+import KitchenPrint from "./KitchenPrint";
 
 type Order = {
   id: number;
@@ -66,19 +67,22 @@ export default function OrderTable({
                     minute: '2-digit',
                   })}
                 </td>
-                <td className="px-6 py-4 flex gap-2">
-                  <button
-                    className="text-purple-400 hover:text-purple-300 font-medium"
-                    onClick={() => onView(order)}
-                  >
-                    Ver detalles
-                  </button>
-                  <button
-                    className="text-red-400 hover:text-red-300 font-medium"
-                    onClick={() => onDelete(order)}
-                  >
-                    Eliminar
-                  </button>
+                <td className="px-6 py-4">
+                  <div className="flex gap-2 items-center">
+                    <KitchenPrint order={order} />
+                    <button
+                      className="text-purple-400 hover:text-purple-300 font-medium"
+                      onClick={() => onView(order)}
+                    >
+                      Ver detalles
+                    </button>
+                    <button
+                      className="text-red-400 hover:text-red-300 font-medium"
+                      onClick={() => onDelete(order)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

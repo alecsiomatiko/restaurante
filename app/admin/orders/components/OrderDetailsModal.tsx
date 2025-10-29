@@ -1,6 +1,7 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Clock, CheckCircle, Truck, AlertCircle, Package, ShoppingBag, User, Phone, Mail, MapPin } from "lucide-react";
+import KitchenPrint from "./KitchenPrint";
 
 type Order = {
   id: number;
@@ -91,8 +92,9 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl bg-gradient-to-br from-purple-900 to-black border-purple-500">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold text-white">
-            Detalles del Pedido {order ? `#${order.id}` : ''}
+          <DialogTitle className="text-2xl font-bold text-white flex items-center justify-between">
+            <span>Detalles del Pedido {order ? `#${order.id}` : ''}</span>
+            <KitchenPrint order={order} />
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-6">

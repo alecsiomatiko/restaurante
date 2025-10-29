@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Bell, CheckCircle, XCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { SafeDate } from "@/hooks/use-safe-date"
 
 export default function DriverOrderNotification() {
   const [newOrders, setNewOrders] = useState<any[]>([])
@@ -72,7 +73,7 @@ export default function DriverOrderNotification() {
 
       if (data && data.length > 0) {
         // Filtrar solo pedidos de entrega a domicilio
-        const deliveryOrders = data.filter((order) => {
+  const deliveryOrders = data.filter((order: any) => {
           try {
             const customerInfo =
               typeof order.customer_info === "string" ? JSON.parse(order.customer_info) : order.customer_info
@@ -272,7 +273,17 @@ export default function DriverOrderNotification() {
                     <br />
                     Dirección: {customerInfo.address || "No disponible"}
                   </p>
-                  <p className="text-xs text-amber-600 mt-1">{new Date(order.created_at).toLocaleString()}</p>
+                  <SafeDate 
+                    date={order.created_at}
+                    className="text-xs text-amber-600 mt-1"
+                    options={{
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    }}
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <button

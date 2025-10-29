@@ -279,6 +279,18 @@ export default function AdminUsersPage() {
             </CardContent>
           </Card>
 
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950 dark:to-yellow-900">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Meseros</p>
+                  <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.waiters}</p>
+                </div>
+                <UserCheck className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -299,18 +311,6 @@ export default function AdminUsersPage() {
                   <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.active}</p>
                 </div>
                 <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-600 dark:text-red-400">Inactivos</p>
-                  <p className="text-2xl font-bold text-red-900 dark:text-red-100">{stats.inactive}</p>
-                </div>
-                <UserX className="h-6 w-6 text-red-600 dark:text-red-400" />
               </div>
             </CardContent>
           </Card>
@@ -458,6 +458,15 @@ export default function AdminUsersPage() {
                                     Activar
                                   </>
                                 )}
+                              </DropdownMenuItem>
+                              
+                              {/* Opción para hacer/quitar admin */}
+                              <DropdownMenuItem 
+                                onClick={() => updateUserRole(user.id, user.is_admin ? 'customer' : 'admin')}
+                                className={user.is_admin ? "text-orange-600 hover:text-orange-700" : "text-purple-600 hover:text-purple-700"}
+                              >
+                                <Shield className="h-4 w-4 mr-2" />
+                                {user.is_admin ? 'Quitar admin' : 'Hacer admin'}
                               </DropdownMenuItem>
                               
                               {!user.is_admin && (

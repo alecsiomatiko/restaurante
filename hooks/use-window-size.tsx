@@ -5,8 +5,11 @@ export function useWindowSize() {
     width: 0,
     height: 0,
   })
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
+    setIsClient(true)
+    
     function handleResize() {
       setWindowSize({
         width: window.innerWidth,
@@ -22,5 +25,6 @@ export function useWindowSize() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  return windowSize
+  // Return default values during SSR
+  return isClient ? windowSize : { width: 0, height: 0 }
 }

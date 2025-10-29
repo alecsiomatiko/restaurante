@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import OrderFilters from "./components/OrderFilters"
 import OrderTable from "./components/OrderTable"
 import OrderDetailsModal from "./components/OrderDetailsModal"
+import KitchenPrint from "./components/KitchenPrint"
 
 type Order = {
   id: number
@@ -71,6 +72,15 @@ export default function AdminOrdersPage() {
   const [drivers, setDrivers] = useState<any[]>([])
   const [selectedDriver, setSelectedDriver] = useState<string>('')
   const [assigningDriver, setAssigningDriver] = useState(false)
+  const [printingOrder, setPrintingOrder] = useState<Order | null>(null)
+
+  // Handle print cleanup
+  useEffect(() => {
+    if (printingOrder) {
+      const timer = setTimeout(() => setPrintingOrder(null), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [printingOrder]);
 
   const fetchDrivers = async () => {
     try {
@@ -297,6 +307,9 @@ export default function AdminOrdersPage() {
             setSelectedOrder(order);
             setShowModal(true);
           }}
+          onPrintKitchen={(order) => {
+            setPrintingOrder(order);
+          }}
           onDelete={async (order) => {
             if (confirm(`¿Seguro que quieres eliminar el pedido #${order.id}?`)) {
               try {
@@ -332,6 +345,16 @@ export default function AdminOrdersPage() {
           fetchOrders={fetchOrders}
           setShowModal={setShowModal}
         />
+        
+        {/* Kitchen Print Component */}
+        {printingOrder && (
+          <div style={{ position: 'absolute', left: '-9999px' }}>
+            <KitchenPrint 
+              order={printingOrder} 
+              key={printingOrder.id} 
+            />
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

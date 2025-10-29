@@ -122,3 +122,20 @@
 .react-datepicker__navigation--next {
   border-left-color: #cbd5e1 !important;
 }
+
+/* Suprimir advertencias de hidratación */
+.suppress-hydration-warning {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Para extensiones del navegador que modifican el DOM */
+[data-lt-installed="true"] {
+  /* LanguageTool extension compatibility */
+  outline: none;
+}
+
+/* Suprimir advertencias específicas de React Hydration */
+html[suppresshydrationwarning="true"] {
+  /* Evitar diferencias de renderizado */
+  -webkit-text-size-adjust: 100%;
+}

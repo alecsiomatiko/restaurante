@@ -1,9 +1,15 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Instagram, Facebook } from "lucide-react"
+import { useState, useEffect } from "react"
 
 // Ensure footer only references Sonora Express
 export default function Footer() {
+  const [currentYear, setCurrentYear] = useState<number>(2024)
+
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear())
+  }, [])
   return (
     <footer className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-900 text-white py-8 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/10 to-transparent"></div>
@@ -71,7 +77,7 @@ export default function Footer() {
             </ul>
             <div className="mt-4">
               <p className="text-sm">
-                © {new Date().getFullYear()} Supernova Burgers & Wings. Todos los derechos reservados.
+                © {currentYear} Supernova Burgers & Wings. Todos los derechos reservados.
               </p>
             </div>
             <div className="mt-4 space-y-2">

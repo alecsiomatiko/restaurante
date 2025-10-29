@@ -1,0 +1,15 @@
+// app/globals.css - Agregar al final del archivo
+/* Suprimir advertencias de hidratación durante desarrollo */
+.suppress-hydration-warning {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Para las extensiones del navegador que modifican el DOM */
+[data-lt-installed="true"] {
+  /* Estilos para elementos modificados por LanguageTool u otras extensiones */
+}
+
+/* Suprimir advertencias específicas de React Hydration */
+html[suppresshydrationwarning="true"] {
+  /* Evitar diferencias de renderizado */
+}
