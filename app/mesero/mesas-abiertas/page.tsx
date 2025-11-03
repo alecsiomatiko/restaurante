@@ -112,12 +112,81 @@ export default function MesasAbiertasPage() {
 
   const handlePrintTable = async (table: GroupedTable) => {
     console.log("🖨️ Printing ticket for table:", table.tableName);
+    setPrintingTable(table.tableName);
+    
+    try {
+      // Intentar imprimir vía servidor Raspberry Pi primero
+      const printed = await printTableViaServer(table);
+      if (printed) {
+        console.log('✅ Ticket impreso vía servidor Raspberry Pi');
+        toast.success("Éxito", `Ticket de ${table.tableName} enviado a impresora térmica`);
+        setPrintingTable(null);
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error imprimiendo vía servidor:', error);
+    }
+    
+    // Fallback: Imprimir vía navegador
+    console.log("🔄 Fallback: Imprimiendo vía navegador");
+    printTableViaBrowser(table);
+  };
+
+  const printTableViaServer = async (table: GroupedTable): Promise<boolean> => {
+    try {
+      const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://192.168.100.98:3001';
+      
+      // Preparar datos para el servidor
+      const printData = {
+        type: 'table-ticket',
+        tableName: table.tableName,
+        business: {
+          name: businessInfo.name || 'Restaurante',
+          address: businessInfo.address || '',
+          phone: businessInfo.phone || '',
+          logoUrl: businessInfo.logo_url || ''
+        },
+        items: table.allItems.map(item => ({
+          name: item.name || 'Sin nombre',
+          quantity: item.quantity || 1,
+          price: parseFloat(item.price) || 0
+        })),
+        total: table.totalMesa,
+        orderCount: table.orderCount,
+        firstOrderDate: table.firstOrderDate,
+        lastOrderDate: table.lastOrderDate,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('📡 Enviando a print server:', printData);
+
+      const response = await fetch(`${PRINT_SERVER_URL}/print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(printData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Impresión exitosa:', result);
+        return true;
+      } else {
+        console.error('❌ Error del servidor de impresión:', await response.text());
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error conectando al servidor de impresión:', error);
+      return false;
+    }
+  };
+
+  const printTableViaBrowser = (table: GroupedTable) => {
     console.log("=== TICKET GENERATION DEBUG ===");
     console.log("Business info:", businessInfo);
     console.log("Logo URL from DB:", businessInfo.logo_url);
     console.log("Current origin:", window.location.origin);
-    
-    setPrintingTable(table.tableName);
     
     const ticketContent = generateTableTicket(table);
     console.log("📄 Generated ticket HTML length:", ticketContent.length);
@@ -138,7 +207,7 @@ export default function MesasAbiertasPage() {
             printWindow.close();
             setPrintingTable(null);
           };
-        }, 1500); // Reducido a 1.5 segundos
+        }, 1500);
       };
     } else {
       console.error("❌ Failed to open print window");

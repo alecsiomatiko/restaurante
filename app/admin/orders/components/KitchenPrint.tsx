@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Printer } from "lucide-react";
 
 type Order = {
@@ -22,8 +22,93 @@ interface KitchenPrintProps {
   order: Order;
 }
 
+// URL del servidor de impresión en Raspberry Pi
+const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://192.168.100.98:3001';
+
 export default function KitchenPrint({ order }: KitchenPrintProps) {
-  const handlePrint = () => {
+  const [printing, setPrinting] = useState(false);
+
+  const handlePrint = async () => {
+    setPrinting(true);
+    
+    try {
+      // Intentar imprimir via servidor Raspberry Pi
+      const printed = await printViaServer();
+      if (printed) {
+        console.log('✅ Impreso vía servidor Raspberry Pi');
+        setPrinting(false);
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Error imprimiendo vía servidor:', error);
+    }
+    
+    // Fallback: Imprimir vía navegador
+    printViaBrowser();
+    setPrinting(false);
+  };
+
+  const printViaServer = async (): Promise<boolean> => {
+    try {
+      // Parse customer info and items
+      let customerInfo: any = {};
+      try {
+        customerInfo = typeof order.customer_info === "string" 
+          ? JSON.parse(order.customer_info) 
+          : order.customer_info;
+      } catch {}
+
+      let items: any[] = [];
+      try {
+        items = typeof order.items === "string" 
+          ? JSON.parse(order.items) 
+          : order.items;
+      } catch {}
+
+      // Preparar datos para el servidor
+      const printData = {
+        orderId: order.id,
+        customer: {
+          name: customerInfo?.name || 'N/A',
+          phone: customerInfo?.phone || '',
+          address: customerInfo?.address || '',
+          notes: customerInfo?.notes || ''
+        },
+        items: items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        total: order.total,
+        paymentMethod: order.payment_method,
+        deliveryType: customerInfo?.deliveryType || 'pickup',
+        createdAt: order.created_at
+      };
+
+      // Enviar al servidor de impresión
+      const response = await fetch(`${PRINT_SERVER_URL}/print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(printData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Impresión exitosa:', result);
+        return true;
+      } else {
+        console.error('❌ Error del servidor de impresión:', await response.text());
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error conectando al servidor de impresión:', error);
+      return false;
+    }
+  };
+
+  const printViaBrowser = () => {
     // Parse customer info and items
     let customerInfo: any = {};
     try {
@@ -265,11 +350,12 @@ export default function KitchenPrint({ order }: KitchenPrintProps) {
   return (
     <button
       onClick={handlePrint}
-      className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+      disabled={printing}
+      className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
       title="Imprimir comanda de cocina"
     >
       <Printer className="w-4 h-4" />
-      Imprimir Comanda
+      {printing ? 'Imprimiendo...' : 'Imprimir Comanda'}
     </button>
   );
 }
