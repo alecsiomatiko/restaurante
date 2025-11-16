@@ -188,20 +188,25 @@ export default function MenuPageClient() {
           </div>
 
           <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-            <TabsList className="bg-black/30 border-purple-500/20">
-              <TabsTrigger value="all" className="text-white data-[state=active]:bg-purple-600">
-                🌌 Todos
-              </TabsTrigger>
-              {categories.map((category) => (
-                <TabsTrigger
-                  key={category.id}
-                  value={category.id.toString()}
-                  className="text-white data-[state=active]:bg-purple-600"
+            <div className="w-full overflow-x-auto">
+              <TabsList className="bg-black/30 border-purple-500/20 flex-nowrap inline-flex min-w-full w-max p-1">
+                <TabsTrigger 
+                  value="all" 
+                  className="text-white data-[state=active]:bg-purple-600 whitespace-nowrap flex-shrink-0"
                 >
-                  {getCategoryIcon(category.name)} {category.name}
+                  🌌 Todos
                 </TabsTrigger>
-              ))}
-            </TabsList>
+                {categories.map((category) => (
+                  <TabsTrigger
+                    key={category.id}
+                    value={category.id.toString()}
+                    className="text-white data-[state=active]:bg-purple-600 whitespace-nowrap flex-shrink-0"
+                  >
+                    {getCategoryIcon(category.name)} {category.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
           </Tabs>
         </div>
 

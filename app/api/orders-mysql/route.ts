@@ -206,9 +206,11 @@ export async function POST(request: NextRequest) {
 
     // Si es pedido de mesero, buscar si ya existe mesa abierta
     let result;
+    let existingMesa: any[] = [];
+    
     if (waiter_order) {
       // Buscar mesa abierta para este usuario y nombre de mesa
-      const existingMesa = await executeQuery(
+      existingMesa = await executeQuery(
         `SELECT id, items, total FROM orders WHERE user_id = ? AND waiter_order = 1 AND status = 'open_table' AND \`table\` = ? LIMIT 1`,
         [user.id, table]
       ) as any[];
@@ -290,8 +292,10 @@ export async function POST(request: NextRequest) {
     try {
       const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://192.168.100.98:3001';
       
-      // Solo imprimir para pedidos normales (no mesas abiertas de mesero)
-      if (!waiter_order || !table) {
+      // Imprimir TODOS los pedidos nuevos (incluye meseros cuando crean nueva mesa)
+      const shouldPrint = !waiter_order || (waiter_order && existingMesa.length === 0);
+      
+      if (shouldPrint) {
         // Preparar datos de impresión
         let customerInfo: any = {};
         try {
