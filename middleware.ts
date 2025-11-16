@@ -50,9 +50,14 @@ function getUserFromToken(token: string): { id: number, email: string, username:
 
 export async function middleware(req: NextRequest) {
   let response: NextResponse | undefined = undefined;
-  // No aplicar middleware a rutas de API o recursos estáticos
+  
+  // IMPORTANTE: No aplicar middleware a rutas de API
+  if (req.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+  
+  // No aplicar middleware a recursos estáticos
   if (
-    req.nextUrl.pathname.startsWith("/api/") ||
     req.nextUrl.pathname.startsWith("/_next/") ||
     req.nextUrl.pathname.includes(".")
   ) {
