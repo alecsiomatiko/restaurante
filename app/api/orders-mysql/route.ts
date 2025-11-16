@@ -234,6 +234,62 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ✨ IMPRESIÓN AUTOMÁTICA AL CREAR PEDIDO
+    try {
+      const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://192.168.100.98:3001';
+      
+      // Solo imprimir para pedidos normales (no mesas abiertas de mesero)
+      if (!waiter_order || !table) {
+        // Preparar datos de impresión
+        let customerInfo: any = {};
+        try {
+          customerInfo = typeof customer_info === "string" ? JSON.parse(customer_info) : customer_info;
+        } catch {}
+
+        const printData = {
+          orderId: result.insertId,
+          customer: {
+            name: customerInfo?.name || 'Cliente',
+            phone: customerInfo?.phone || '',
+            address: delivery_address || customerInfo?.address || '',
+            notes: notes || customerInfo?.notes || ''
+          },
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          total: total,
+          paymentMethod: payment_method,
+          deliveryType: delivery_address ? 'delivery' : 'pickup',
+          createdAt: new Date().toISOString()
+        };
+
+        console.log('🖨️ Enviando a impresión automática:', printData.orderId);
+        
+        // Enviar a impresión (no bloquear si falla)
+        fetch(`${PRINT_SERVER_URL}/print`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(printData)
+        }).then(async (response) => {
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Pedido impreso automáticamente:', result);
+          } else {
+            console.error('❌ Error en impresión automática:', await response.text());
+          }
+        }).catch(error => {
+          console.error('❌ Error conectando al servidor de impresión:', error);
+        });
+      }
+    } catch (printError) {
+      console.error('❌ Error en impresión automática:', printError);
+      // No fallar el pedido por error de impresión
+    }
+
     return NextResponse.json({
       success: true,
       orderId: result.insertId,
