@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Bell } from "lucide-react"
-import { useSafeDate } from "@/hooks/use-safe-date"
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<any[]>([])
@@ -69,7 +68,7 @@ export default function NotificationBell() {
 
       if (data) {
         setNotifications(data)
-        setUnreadCount((data || []).filter((n: any) => !n.read).length)
+        setUnreadCount(data.filter((n) => !n.read).length)
       }
     } catch (error) {
       console.error("Error al cargar notificaciones:", error)
@@ -143,11 +142,20 @@ export default function NotificationBell() {
   }
 
   const formatTime = (timestamp: string) => {
-    // Return a safe placeholder during hydration
-    return useSafeDate(timestamp, {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.round(diffMs / 60000)
+    const diffHours = Math.round(diffMs / 3600000)
+    const diffDays = Math.round(diffMs / 86400000)
+
+    if (diffMins < 60) {
+      return `Hace ${diffMins} ${diffMins === 1 ? "minuto" : "minutos"}`
+    } else if (diffHours < 24) {
+      return `Hace ${diffHours} ${diffHours === 1 ? "hora" : "horas"}`
+    } else {
+      return `Hace ${diffDays} ${diffDays === 1 ? "día" : "días"}`
+    }
   }
 
   return (

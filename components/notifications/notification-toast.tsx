@@ -5,7 +5,6 @@ import { X, CheckCircle, AlertCircle, Info, AlertTriangle, Bell } from 'lucide-r
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/hooks/use-notifications'
-import { SafeDate } from '@/hooks/use-safe-date'
 
 const iconMap = {
   success: CheckCircle,
@@ -163,16 +162,7 @@ export function NotificationCenter() {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground mt-2">
-                    <SafeDate 
-                      date={notification.timestamp.toISOString()}
-                      options={{
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      }}
-                    />
+                    {notification.timestamp.toLocaleString()}
                   </p>
                   <div className="flex items-center justify-between mt-2">
                     {notification.action && (

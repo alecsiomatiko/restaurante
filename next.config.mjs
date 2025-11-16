@@ -12,10 +12,7 @@ const nextConfig = {
   experimental: {
     esmExternals: false,
   },
-  serverExternalPackages: ['mysql2'],
-  // Suppress hydration warnings during development
-  reactStrictMode: true,
-  swcMinify: true,
+  serverExternalPackages: ['mysql2']
 }
 
 export default nextConfig

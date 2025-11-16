@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { executeQuery } from "@/lib/db-retry"
+import { executeQuery } from "@/lib/db-retry"  
 import { verifyAccessToken, getSessionByToken } from "@/lib/auth-mysql"
 
 // GET - Obtener pedidos
@@ -78,6 +78,58 @@ export async function GET(request: NextRequest) {
     console.error("Error al obtener pedidos:", error)
     return NextResponse.json(
       { error: "Error al obtener pedidos" },
+      { status: 500 }
+    )
+  }
+}
+
+// DELETE - Eliminar todos los pedidos (solo admin con force=true)
+export async function DELETE(request: NextRequest) {
+  try {
+    const authToken = request.cookies.get('auth-token')?.value
+    if (!authToken) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    const user = verifyAccessToken(authToken) || await getSessionByToken(authToken)
+    if (!user?.is_admin) {
+      return NextResponse.json({ error: "Permisos insuficientes" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const forceDelete = searchParams.get('force') === 'true'
+    const confirmDelete = searchParams.get('confirm') === 'yes'
+    
+    if (!forceDelete || !confirmDelete) {
+      return NextResponse.json(
+        { error: "Para eliminar todos los pedidos use: ?force=true&confirm=yes" },
+        { status: 400 }
+      )
+    }
+
+    console.log('🗑️ ELIMINANDO TODOS LOS PEDIDOS...')
+    
+    // 1. Eliminar asignaciones de delivery
+    await executeQuery('DELETE FROM delivery_assignments')
+    console.log('✅ Asignaciones eliminadas')
+    
+    // 2. Eliminar todos los pedidos
+    const result = await executeQuery('DELETE FROM orders') as any
+    console.log('✅ Todos los pedidos eliminados')
+    
+    // 3. Resetear AUTO_INCREMENT
+    await executeQuery('ALTER TABLE orders AUTO_INCREMENT = 1')
+    await executeQuery('ALTER TABLE delivery_assignments AUTO_INCREMENT = 1')
+    
+    return NextResponse.json({
+      success: true,
+      message: `${result.affectedRows} pedidos eliminados exitosamente`,
+      deleted: result.affectedRows
+    })
+  } catch (error: any) {
+    console.error("Error al eliminar todos los pedidos:", error)
+    return NextResponse.json(
+      { error: "Error al eliminar pedidos", details: error.message },
       { status: 500 }
     )
   }

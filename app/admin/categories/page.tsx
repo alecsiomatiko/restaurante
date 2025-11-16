@@ -14,7 +14,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useProducts } from "@/hooks/use-products"
 import { useToast } from "@/hooks/use-notifications"
 import { cn } from "@/lib/utils"
-import { SafeDate } from "@/hooks/use-safe-date"
 
 interface Category {
   id: number
@@ -203,6 +202,16 @@ export default function AdminCategoriesPage() {
     }
   }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   if (loading) {
     return (
       <AdminLayout>
@@ -387,16 +396,7 @@ export default function AdminCategoriesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm">
-                      <SafeDate 
-                        date={category.created_at}
-                        options={{
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        }}
-                      />
+                      {formatDate(category.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

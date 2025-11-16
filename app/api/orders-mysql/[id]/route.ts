@@ -311,11 +311,19 @@ export async function DELETE(
       )
     }
 
-    if (orders[0].status !== 'cancelado') {
-      return NextResponse.json(
-        { error: "Solo se pueden eliminar pedidos cancelados" },
-        { status: 400 }
-      )
+    // Verificar si se quiere forzar la eliminación
+    const { searchParams } = new URL(request.url)
+    const forceDelete = searchParams.get('force') === 'true'
+    
+    if (!forceDelete) {
+      // Permitir eliminar pedidos cancelados (ambos estados posibles)
+      const cancelledStatuses = ['cancelado', 'cancelled', 'canceled']
+      if (!cancelledStatuses.includes(orders[0].status)) {
+        return NextResponse.json(
+          { error: `Solo se pueden eliminar pedidos cancelados. Estado actual: ${orders[0].status}. Use ?force=true para eliminar cualquier pedido.` },
+          { status: 400 }
+        )
+      }
     }
 
     // Eliminar asignaciones de delivery primero
