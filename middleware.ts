@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 // Rutas protegidas que requieren autenticación
-const protectedRoutes = ["/orders", "/checkout", "/profile"]
+const protectedRoutes = ["/orders", "/profile"]
+// Checkout permitido para todos (admins y usuarios)
 
 // Rutas protegidas que requieren ser administrador
 const adminRoutes = ["/admin"]
