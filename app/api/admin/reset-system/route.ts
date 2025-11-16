@@ -8,12 +8,12 @@ export const POST = requireAdmin(async (request: NextRequest) => {
     
     // 1. Eliminar asignaciones de delivery
     console.log('📦 Eliminando asignaciones de delivery...')
-    await executeQuery('DELETE FROM delivery_assignments')
+    const deletedAssignments = await executeQuery('DELETE FROM delivery_assignments')
     console.log('✅ Asignaciones de delivery eliminadas')
     
     // 2. Eliminar todas las órdenes
     console.log('🛒 Eliminando todas las órdenes...')
-    await executeQuery('DELETE FROM orders')
+    const deletedOrders = await executeQuery('DELETE FROM orders')
     console.log('✅ Todas las órdenes eliminadas')
     
     // 3. Limpiar inventario (resetear a stock inicial)
@@ -66,6 +66,8 @@ export const POST = requireAdmin(async (request: NextRequest) => {
       success: true,
       message: "Sistema reseteado exitosamente",
       summary: summary,
+      deletedOrders: (deletedOrders as any)?.affectedRows || 0,
+      deletedAssignments: (deletedAssignments as any)?.affectedRows || 0,
       details: [
         "✅ Todas las órdenes eliminadas",
         "✅ Asignaciones de delivery eliminadas", 
