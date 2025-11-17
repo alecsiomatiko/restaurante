@@ -122,3 +122,22 @@
 .react-datepicker__navigation--next {
   border-left-color: #cbd5e1 !important;
 }
+
+/* Responsive tabs scrolling */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari and Opera */
+}
+
+/* Smooth horizontal scroll for tabs */
+.tabs-scroll {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+}
+
+.tabs-scroll > * {
+  scroll-snap-align: start;
+}

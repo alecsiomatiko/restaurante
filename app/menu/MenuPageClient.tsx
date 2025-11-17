@@ -187,12 +187,42 @@ export default function MenuPageClient() {
             </div>
           </div>
 
-          <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
-            <div className="w-full overflow-x-auto">
-              <TabsList className="bg-black/30 border-purple-500/20 flex-nowrap inline-flex min-w-full w-max p-1">
+          {/* Mobile-first category filters */}
+          <div className="block md:hidden mb-6">
+            <div className="flex overflow-x-auto scrollbar-hide gap-2 px-1 py-2 tabs-scroll">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                  selectedCategory === "all" 
+                    ? "bg-purple-600 text-white shadow-lg" 
+                    : "bg-black/30 text-purple-300 border border-purple-500/30 hover:bg-purple-600/20"
+                }`}
+              >
+                🌌 Todos
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategory(category.id.toString())}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                    selectedCategory === category.id.toString() 
+                      ? "bg-purple-600 text-white shadow-lg" 
+                      : "bg-black/30 text-purple-300 border border-purple-500/30 hover:bg-purple-600/20"
+                  }`}
+                >
+                  {getCategoryIcon(category.name)} {category.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop tabs */}
+          <div className="hidden md:block">
+            <Tabs value={selectedCategory} onValueChange={setSelectedCategory}>
+              <TabsList className="bg-black/30 border-purple-500/20 flex-wrap md:flex-nowrap justify-center">
                 <TabsTrigger 
                   value="all" 
-                  className="text-white data-[state=active]:bg-purple-600 whitespace-nowrap flex-shrink-0"
+                  className="text-white data-[state=active]:bg-purple-600"
                 >
                   🌌 Todos
                 </TabsTrigger>
@@ -200,14 +230,14 @@ export default function MenuPageClient() {
                   <TabsTrigger
                     key={category.id}
                     value={category.id.toString()}
-                    className="text-white data-[state=active]:bg-purple-600 whitespace-nowrap flex-shrink-0"
+                    className="text-white data-[state=active]:bg-purple-600"
                   >
                     {getCategoryIcon(category.name)} {category.name}
                   </TabsTrigger>
                 ))}
               </TabsList>
-            </div>
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
 
         {/* Products Grid */}
