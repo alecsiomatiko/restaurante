@@ -529,17 +529,17 @@ export default function CheckoutPage() {
                       value={orderType} 
                       onValueChange={(value: 'delivery' | 'pickup') => setOrderType(value)}
                     >
-                      <div className="flex items-center space-x-2 p-3 rounded-lg bg-white/5 border border-purple-300/20">
-                        <RadioGroupItem value="delivery" id="delivery" />
-                        <Label htmlFor="delivery" className="text-white flex-1 cursor-pointer">
+                      <div className="flex items-center space-x-2 p-3 rounded-lg bg-gray-800/30 border border-gray-600/40 opacity-60">
+                        <RadioGroupItem value="delivery" id="delivery" disabled />
+                        <Label htmlFor="delivery" className="text-gray-400 flex-1 cursor-not-allowed">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
                               <Truck className="h-4 w-4 mr-2" />
                               <span>Delivery a domicilio</span>
                             </div>
-                            <Badge className="bg-orange-500">$25.00</Badge>
+                            <Badge className="bg-gray-600 text-gray-300">PRÓXIMAMENTE</Badge>
                           </div>
-                          <p className="text-purple-300 text-sm mt-1">Entrega en 30-45 minutos</p>
+                          <p className="text-gray-500 text-sm mt-1">Disponible muy pronto</p>
                         </Label>
                       </div>
                       <div className="flex items-center space-x-2 p-3 rounded-lg bg-white/5 border border-purple-300/20">

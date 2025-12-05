@@ -290,10 +290,10 @@ export async function POST(request: NextRequest) {
 
     // ✨ IMPRESIÓN AUTOMÁTICA AL CREAR PEDIDO
     try {
-      const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://192.168.100.98:3001';
+      const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'https://untextural-louetta-nonrestrictedly.ngrok-free.dev';
       
-      // Imprimir TODOS los pedidos nuevos (incluye meseros cuando crean nueva mesa)
-      const shouldPrint = !waiter_order || (waiter_order && existingMesa.length === 0);
+      // Imprimir TODOS los pedidos (incluye meseros siempre)
+      const shouldPrint = true; // Siempre imprimir, tanto mesas nuevas como existentes
       
       if (shouldPrint) {
         // Preparar datos de impresión
@@ -302,7 +302,32 @@ export async function POST(request: NextRequest) {
           customerInfo = typeof customer_info === "string" ? JSON.parse(customer_info) : customer_info;
         } catch {}
 
-        const printData = {
+        // Datos de impresión diferenciados para meseros
+        const isUpdatingExistingTable = waiter_order && existingMesa.length > 0;
+        const printData = waiter_order ? {
+          // 🍽️ FORMATO ESPECIAL PARA MESERO
+          orderId: result.insertId,
+          isWaiterOrder: true,
+          tableName: table || 'Mesa sin asignar',
+          isTableUpdate: isUpdatingExistingTable, // Flag para formato de comanda comedor
+          notes: notes || '', // Notas del mesero al nivel principal
+          customer: {
+            name: isUpdatingExistingTable ? 'COMANDA COMEDOR - PRODUCTOS ADICIONALES' : 'MESERO - PEDIDO LOCAL',
+            phone: '',
+            address: 'RECOGER EN LOCAL',
+            notes: notes || ''
+          },
+          items: items.map(item => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          total: total,
+          paymentMethod: 'efectivo',
+          deliveryType: 'dine_in',
+          createdAt: new Date().toISOString()
+        } : {
+          // 🛍️ FORMATO NORMAL PARA CLIENTES
           orderId: result.insertId,
           customer: {
             name: customerInfo?.name || 'Cliente',

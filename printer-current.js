@@ -107,48 +107,13 @@ async function printOrder(order) {
             .feed(1);
         }
 
-        // Tipo de entrega (destacado) - detectar si es orden de mesero
+        // Tipo de entrega (destacado)
         printer
           .align('ct')
           .size(2, 2)
           .style('b');
 
-        // Verificar si es orden de mesero (usando isWaiterOrder flag o tableName)
-        if (order.isWaiterOrder || order.tableName) {
-          // Diferente formato para comanda comedor vs pedido nuevo
-          if (order.isTableUpdate) {
-            printer.text('COMANDA COMEDOR');
-            printer
-              .feed(1)
-              .align('ct')
-              .size(1, 1)
-              .style('b')
-              .text('PRODUCTOS ADICIONALES')
-              .style('normal');
-          } else {
-            printer.text('PEDIDO MESA');
-          }
-          
-          // Mostrar nombre de mesa si está disponible
-          if (order.tableName) {
-            printer
-              .size(1, 1)
-              .style('normal')
-              .feed(1)
-              .align('ct')
-              .style('b')
-              .text(`MESA: ${order.tableName}`)
-              .style('normal');
-          }
-          
-          printer
-            .feed(1)
-            .align('ct')
-            .size(1, 1)
-            .style('b')
-            .text('RECOGER EN LOCAL')
-            .style('normal');
-        } else if (order.delivery_type === 'delivery') {
+        if (order.delivery_type === 'delivery') {
           printer.text('DELIVERY');
         } else if (order.delivery_type === 'pickup') {
           printer.text('RECOGER');
@@ -284,6 +249,189 @@ async function printOrder(order) {
 }
 
 /**
+ * Imprimir ticket de mesa/comedor
+ */
+async function printTableTicket(data) {
+  return new Promise((resolve, reject) => {
+    const device = getPrinterDevice();
+    
+    device.open(function(error) {
+      if (error) {
+        console.error('Error abriendo impresora:', error);
+        return reject(new Error(`No se pudo conectar a la impresora: ${error.message}`));
+      }
+
+      try {
+        const printer = new escpos.Printer(device, { encoding: 'utf8' });
+        const now = moment().tz('America/Mexico_City');
+
+        // Encabezado
+        printer
+          .font('a')
+          .align('ct')
+          .style('bu')
+          .size(2, 2);
+
+        // Nombre del negocio
+        if (data.business && data.business.name) {
+          printer.text(data.business.name.toUpperCase());
+        } else {
+          printer.text('SUPERNOVA BURGERS');
+        }
+
+        printer
+          .size(1, 1)
+          .style('normal')
+          .feed(1);
+
+        // Información del negocio
+        if (data.business) {
+          if (data.business.address) {
+            printer.text(data.business.address);
+          }
+          if (data.business.phone) {
+            printer.text(`Tel: ${data.business.phone}`);
+          }
+        }
+
+        printer
+          .text('================================')
+          .feed(1);
+
+        // TIPO DE TICKET
+        printer
+          .size(2, 2)
+          .style('b')
+          .text('COMANDA COMEDOR')
+          .size(1, 1)
+          .style('normal')
+          .feed(1);
+
+        // Información de la mesa
+        printer
+          .size(2, 2)
+          .style('b')
+          .text(data.tableName || 'MESA')
+          .size(1, 1)
+          .style('normal')
+          .feed(1)
+          .text(`Fecha: ${now.format('DD/MM/YYYY HH:mm')}`)
+          .feed(1);
+
+        // Mesero
+        if (data.waiterName) {
+          printer
+            .style('b')
+            .text(`Mesero: ${data.waiterName}`)
+            .style('normal')
+            .feed(1);
+        }
+
+        // Número de orden
+        if (data.orderId) {
+          printer.text(`Orden #${data.orderId}`);
+        }
+
+        // Número de órdenes acumuladas
+        if (data.orderCount) {
+          printer.text(`Total ordenes: ${data.orderCount}`);
+        }
+
+        printer
+          .text('================================')
+          .feed(1);
+
+        // Notas de la mesa (si existen)
+        if (data.notes) {
+          printer
+            .align('lt')
+            .style('b')
+            .text('NOTAS DE LA MESA:')
+            .style('normal')
+            .text(data.notes)
+            .feed(1)
+            .align('ct')
+            .text('================================')
+            .feed(1);
+        }
+
+        // Productos
+        printer
+          .align('lt')
+          .style('b')
+          .text('PRODUCTOS:')
+          .style('normal')
+          .feed(1);
+
+        const items = data.items || [];
+        items.forEach((item) => {
+          const itemName = item.name || 'Sin nombre';
+          const qty = item.quantity || 1;
+          const price = parseFloat(item.price) || 0;
+          
+          printer
+            .style('b')
+            .text(`${qty}x ${itemName}`)
+            .style('normal');
+
+          if (price > 0) {
+            printer.text(`   $${price.toFixed(2)} c/u  = $${(qty * price).toFixed(2)}`);
+          }
+
+          // Extras/Modificadores
+          if (item.extras && item.extras.length > 0) {
+            item.extras.forEach(extra => {
+              printer.text(`   + ${extra.name}`);
+              if (extra.price && parseFloat(extra.price) > 0) {
+                printer.text(`     $${parseFloat(extra.price).toFixed(2)}`);
+              }
+            });
+          }
+
+          // Notas del producto
+          if (item.notes) {
+            printer
+              .style('i')
+              .text(`   Nota: ${item.notes}`)
+              .style('normal');
+          }
+
+          printer.feed(1);
+        });
+
+        // Total
+        printer
+          .align('ct')
+          .text('================================')
+          .feed(1)
+          .size(2, 2)
+          .style('b')
+          .text(`TOTAL: $${parseFloat(data.total || 0).toFixed(2)}`)
+          .size(1, 1)
+          .style('normal')
+          .feed(1)
+          .text('================================')
+          .feed(2);
+
+        // Footer
+        printer
+          .text('Gracias por su preferencia')
+          .feed(3)
+          .cut()
+          .close();
+
+        console.log('✅ Ticket de mesa impreso correctamente');
+        resolve({ success: true });
+
+      } catch (err) {
+        console.error('Error imprimiendo ticket de mesa:', err);
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
  * Imprimir ticket de prueba
  */
 async function printTest() {
@@ -347,6 +495,7 @@ async function printTest() {
 
 module.exports = {
   printOrder,
+  printTableTicket,
   printTest,
   checkPrinterStatus
 };

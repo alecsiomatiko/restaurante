@@ -23,7 +23,7 @@ interface KitchenPrintProps {
 }
 
 // URL del servidor de impresión en Raspberry Pi
-const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'http://192.168.100.98:3001';
+const PRINT_SERVER_URL = process.env.NEXT_PUBLIC_PRINT_SERVER_URL || 'https://untextural-louetta-nonrestrictedly.ngrok-free.dev';
 
 export default function KitchenPrint({ order }: KitchenPrintProps) {
   const [printing, setPrinting] = useState(false);
@@ -35,16 +35,14 @@ export default function KitchenPrint({ order }: KitchenPrintProps) {
       // Intentar imprimir via servidor Raspberry Pi
       const printed = await printViaServer();
       if (printed) {
-        console.log('✅ Impreso vía servidor Raspberry Pi');
-        setPrinting(false);
-        return;
+        console.log('✅ Comanda impresa correctamente');
+      } else {
+        console.error('❌ Error: No se pudo imprimir la comanda');
       }
     } catch (error) {
-      console.error('❌ Error imprimiendo vía servidor:', error);
+      console.error('❌ Error imprimiendo comanda:', error);
     }
     
-    // Fallback: Imprimir vía navegador
-    printViaBrowser();
     setPrinting(false);
   };
 
